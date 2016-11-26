@@ -7,8 +7,22 @@ from __future__ import print_function
 import h5py
 import numpy as np
 from keras.utils.np_utils import to_categorical
+
 from tfglib.construct_table import parse_file
 from tfglib.utils import kronecker_delta
+
+
+def zero_pad_params(max_length, params_matrix):
+    """Function to apply a zero-padding to a parameters matrix"""
+    spam = np.concatenate((
+        np.zeros((
+            max_length - params_matrix.shape[0],
+            params_matrix.shape[1]
+        )),
+        params_matrix
+    ))
+
+    return spam
 
 
 def find_longest_sequence(data_dir, speakers_list, basenames_list):
@@ -92,6 +106,10 @@ def seq2seq_build_file_table(
             "Please make sure the target data directory string ends with a '/'"
         )
 
+    print('Src: ' + str(src_index))
+    print('Trg: ' + str(trg_index))
+    print('Basename: ' + str(basename))
+
     # Parse parameter files
     source_mcp = parse_file(40, source_dir + basename + '.' + 'mcp' + '.dat')
 
@@ -152,40 +170,25 @@ def seq2seq_build_file_table(
         nb_classes=10
     )
 
-    # Concatenate source and target params
+    # Fix zero-paddings to get consistent matrix sizes when concatenating
+    # Concatenate zero-padded source and target params
     source_params = np.concatenate((
-        source_mcp,
-        source_f0_i,
-        source_vf_i,
-        source_voiced,
-        src_eos_flag,
-        src_spk_index,
-        trg_spk_index
+        zero_pad_params(longest_seq, source_mcp),
+        zero_pad_params(longest_seq, source_f0_i),
+        zero_pad_params(longest_seq, source_vf_i),
+        zero_pad_params(longest_seq, source_voiced),
+        zero_pad_params(longest_seq, src_eos_flag),
+        zero_pad_params(longest_seq, src_spk_index),
+        zero_pad_params(longest_seq, trg_spk_index)
     ), axis=1)
-    # Apply zero-padding
-    source_params_zp = np.concatenate((
-        np.zeros((
-            longest_seq - source_params.shape[0],
-            source_params.shape[1]
-        )),
-        source_params
-    ))
 
     target_params = np.concatenate((
-        target_mcp,
-        target_f0_i,
-        target_vf_i,
-        target_voiced,
-        trg_eos_flag
+        zero_pad_params(longest_seq, target_mcp),
+        zero_pad_params(longest_seq, target_f0_i),
+        zero_pad_params(longest_seq, target_vf_i),
+        zero_pad_params(longest_seq, target_voiced),
+        zero_pad_params(longest_seq, trg_eos_flag)
     ), axis=1)
-    # Apply zero-padding
-    target_params_zp = np.concatenate((
-        target_params,
-        np.zeros((
-            longest_seq - target_params.shape[0],
-            target_params.shape[1]
-        ))
-    ))
 
     # Initialize padding masks, to be passed into keras' fit
     # Source mask
@@ -214,7 +217,7 @@ def seq2seq_build_file_table(
 
     assert source_mask.shape == target_mask.shape
 
-    return source_params_zp, source_mask, target_params_zp, target_mask
+    return source_params, source_mask, target_params, target_mask
 
 
 def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
