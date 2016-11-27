@@ -93,10 +93,6 @@ def seq2seq_build_file_table(
             "Please make sure the target data directory string ends with a '/'"
         )
 
-    print('Src: ' + str(src_index))
-    print('Trg: ' + str(trg_index))
-    print('Basename: ' + str(basename))
-
     # Parse parameter files
     source_mcp = parse_file(40, source_dir + basename + '.' + 'mcp' + '.dat')
 
