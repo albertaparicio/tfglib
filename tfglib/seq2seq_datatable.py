@@ -269,9 +269,9 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
                 trg_masks.append(aux_trg_mask)
 
     return (np.array(src_datatable),
-            np.array(src_masks),
+            np.array(src_masks).reshape(-1, longest_seq), # Reshape into 2D mask
             np.array(trg_datatable),
-            np.array(trg_masks),
+            np.array(trg_masks).reshape(-1, longest_seq), # Reshape into 2D mask
             longest_seq)
 
 
