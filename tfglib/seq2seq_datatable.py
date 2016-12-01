@@ -145,11 +145,11 @@ def seq2seq_build_file_table(
 
     # Initialize one-hot-encoded speaker indexes
     src_spk_index = to_categorical(
-        src_index * np.ones((source_vf.shape[0],)),
+        src_index * np.ones((source_vf.shape[0],), dtype=int),
         nb_classes=10
     )
     trg_spk_index = to_categorical(
-        trg_index * np.ones((target_vf.shape[0],)),
+        trg_index * np.ones((target_vf.shape[0],), dtype=int),
         nb_classes=10
     )
 
@@ -320,12 +320,19 @@ def seq2seq_save_datatable(data_dir, datatable_out_file):
     # Save data to .h5 file
     with h5py.File(datatable_out_file + '.h5', 'w') as f:
         for dataset_name, dataset in data_dict.items():
-            f.create_dataset(
-                dataset_name,
-                data=dataset,
-                # compression="gzip",
-                # compression_opts=9
-            )
+            if dataset_name == 'max_seq_length':
+                f.create_dataset(
+                    dataset_name,
+                    data=dataset
+                )
+
+            else:
+                f.create_dataset(
+                    dataset_name,
+                    data=dataset,
+                    compression="gzip",
+                    compression_opts=9
+                )
 
         f.close()
 
