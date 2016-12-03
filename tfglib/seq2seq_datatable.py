@@ -273,9 +273,9 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
                 trg_masks.append(aux_trg_mask)
 
     return (np.array(src_datatable),
-            np.array(src_masks).reshape(-1, longest_seq), # Reshape into 2D mask
+            np.array(src_masks).reshape(-1, longest_seq),  # Reshape into 2D mask
             np.array(trg_datatable),
-            np.array(trg_masks).reshape(-1, longest_seq), # Reshape into 2D mask
+            np.array(trg_masks).reshape(-1, longest_seq),  # Reshape into 2D mask
             longest_seq)
 
 
@@ -317,26 +317,22 @@ def seq2seq_save_datatable(data_dir, datatable_out_file):
         'src_datatable': source_datatable,
         'src_mask': source_masks,
         'trg_datatable': target_datatable,
-        'trg_mask': target_masks,
-        'max_seq_length': max_seq_length
+        'trg_mask': target_masks
     }
 
     # Save data to .h5 file
     with h5py.File(datatable_out_file + '.h5', 'w') as f:
-        for dataset_name, dataset in data_dict.items():
-            if dataset_name == 'max_seq_length':
-                f.create_dataset(
-                    dataset_name,
-                    data=dataset
-                )
+        # Save max_seq_length as an attribute
+        f.attrs.create('max_seq_length', max_seq_length, dtype=int)
 
-            else:
-                f.create_dataset(
-                    dataset_name,
-                    data=dataset,
-                    compression="gzip",
-                    compression_opts=9
-                )
+        # Save the rest of datasets
+        for dataset_name, dataset in data_dict.items():
+            f.create_dataset(
+                dataset_name,
+                data=dataset,
+                compression="gzip",
+                compression_opts=9
+            )
 
         f.close()
 
@@ -362,11 +358,14 @@ def seq2seq2_load_datatable(datatable_file):
 
     # Load data from .h5 file
     with h5py.File(datatable_file, 'r') as file:
+        # Load datasets
         source_datatable = file['src_datatable'][:, :]
         source_masks = file['src_mask'][:, :]
         target_datatable = file['trg_datatable'][:, :]
         target_masks = file['trg_mask'][:, :]
-        max_seq_length = file['max_seq_length'][()]
+
+        # Load max_seq_length attribute
+        max_seq_length = file.attrs.get('max_seq_length')
 
         file.close()
 
