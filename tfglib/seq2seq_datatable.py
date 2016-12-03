@@ -249,6 +249,10 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
     for src_index, src_spk in enumerate(speakers):
         for trg_index, trg_spk in enumerate(speakers):
             for basename in basenames:
+                print(src_spk)
+                print(trg_spk)
+                print(basename)
+
                 (aux_src_params,
                  aux_src_mask,
                  aux_trg_params,
@@ -362,7 +366,7 @@ def seq2seq2_load_datatable(datatable_file):
         source_masks = file['src_mask'][:, :]
         target_datatable = file['trg_datatable'][:, :]
         target_masks = file['trg_mask'][:, :]
-        max_seq_length = file['max_seq_length'][:, :]
+        max_seq_length = file['max_seq_length'][()]
 
         file.close()
 
