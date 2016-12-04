@@ -238,11 +238,15 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
     # Find number of frames in longest sequence in the dataset
     longest_seq = find_longest_sequence(data_dir, speakers, basenames)
 
-    # Initialize datatable
+    # Initialize datatables
     src_datatable = []
     src_masks = []
     trg_datatable = []
     trg_masks = []
+
+    # Initialize maximum and minimum values matrices
+    spk_max = np.zeros((10, 42))
+    spk_min = 1e+50 * np.ones((10, 42))
 
     # Nest iterate over speakers
     for src_index, src_spk in enumerate(speakers):
@@ -265,6 +269,13 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
                     longest_seq
                 )
 
+                # Obtain maximum and minimum values of each parameter of each speaker
+                # Mask parameters to avoid the zero-padded values
+                masked_params = np.ma.array(aux_src_params[:, 0:42], mask=1 - np.repeat(aux_src_mask, 42, axis=1))
+                # Compute maximum and minimum values
+                spk_max[src_index, :] = np.maximum(spk_max[src_index, :], np.ma.max(masked_params, axis=0))
+                spk_min[src_index, :] = np.minimum(spk_min[src_index, :], np.ma.min(masked_params, axis=0))
+
                 # Append sequence params and masks to main datatables and masks
                 src_datatable.append(aux_src_params)
                 src_masks.append(aux_src_mask)
@@ -275,7 +286,9 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
             np.array(src_masks).reshape(-1, longest_seq),  # Reshape to 2D mask
             np.array(trg_datatable),
             np.array(trg_masks).reshape(-1, longest_seq),  # Reshape to 2D mask
-            longest_seq)
+            longest_seq,
+            spk_max,
+            spk_min)
 
 
 def seq2seq_save_datatable(data_dir, datatable_out_file):
@@ -304,7 +317,9 @@ def seq2seq_save_datatable(data_dir, datatable_out_file):
      source_masks,
      target_datatable,
      target_masks,
-     max_seq_length
+     max_seq_length,
+     speakers_max,
+     speakers_min
      ) = seq2seq_construct_datatable(
         data_dir,
         'speakers.list',
@@ -323,6 +338,8 @@ def seq2seq_save_datatable(data_dir, datatable_out_file):
     with h5py.File(datatable_out_file + '.h5', 'w') as f:
         # Save max_seq_length as an attribute
         f.attrs.create('max_seq_length', max_seq_length, dtype=int)
+        f.attrs.create('speakers_max', speakers_max)
+        f.attrs.create('speakers_min', speakers_min)
 
         # Save the rest of datasets
         for dataset_name, dataset in data_dict.items():
@@ -339,7 +356,9 @@ def seq2seq_save_datatable(data_dir, datatable_out_file):
             source_masks,
             target_datatable,
             target_masks,
-            max_seq_length)
+            max_seq_length,
+            speakers_max,
+            speakers_min)
 
 
 def seq2seq2_load_datatable(datatable_file):
@@ -365,6 +384,8 @@ def seq2seq2_load_datatable(datatable_file):
 
         # Load max_seq_length attribute
         max_seq_length = file.attrs.get('max_seq_length')
+        speakers_max = file.attrs.get('speakers_max')
+        speakers_min = file.attrs.get('speakers_min')
 
         file.close()
 
@@ -372,4 +393,6 @@ def seq2seq2_load_datatable(datatable_file):
             source_masks,
             target_datatable,
             target_masks,
-            max_seq_length)
+            max_seq_length,
+            speakers_max,
+            speakers_min)
