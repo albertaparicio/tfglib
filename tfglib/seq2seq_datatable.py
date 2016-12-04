@@ -153,7 +153,33 @@ def seq2seq_build_file_table(
         nb_classes=10
     )
 
-    # Fix zero-paddings to get consistent matrix sizes when concatenating
+    # Initialize padding masks, to be passed into keras' fit
+    # Source mask
+    source_mask = np.concatenate((
+        np.zeros((
+            longest_seq - source_mcp.shape[0],
+            1
+        )),
+        np.ones((
+            source_mcp.shape[0],
+            1
+        ))
+    ))
+
+    # Target mask
+    target_mask = np.concatenate((
+        np.ones((
+            target_mcp.shape[0],
+            1
+        )),
+        np.zeros((
+            longest_seq - target_mcp.shape[0],
+            1
+        ))
+    ))
+
+    assert source_mask.shape == target_mask.shape
+
     # Concatenate zero-padded source and target params
     source_params = np.concatenate((
         zero_pad_params(longest_seq, 'src', source_mcp),
@@ -172,33 +198,6 @@ def seq2seq_build_file_table(
         zero_pad_params(longest_seq, 'trg', target_voiced),
         zero_pad_params(longest_seq, 'trg', trg_eos_flag)
     ), axis=1)
-
-    # Initialize padding masks, to be passed into keras' fit
-    # Source mask
-    source_mask = np.concatenate((
-        np.zeros((
-            longest_seq - source_params.shape[0],
-            1
-        )),
-        np.ones((
-            source_params.shape[0],
-            1
-        ))
-    ))
-
-    # Target mask
-    target_mask = np.concatenate((
-        np.ones((
-            target_params.shape[0],
-            1
-        )),
-        np.zeros((
-            longest_seq - target_params.shape[0],
-            1
-        ))
-    ))
-
-    assert source_mask.shape == target_mask.shape
 
     return source_params, source_mask, target_params, target_mask
 
@@ -273,9 +272,9 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
                 trg_masks.append(aux_trg_mask)
 
     return (np.array(src_datatable),
-            np.array(src_masks).reshape(-1, longest_seq),  # Reshape into 2D mask
+            np.array(src_masks).reshape(-1, longest_seq),  # Reshape to 2D mask
             np.array(trg_datatable),
-            np.array(trg_masks).reshape(-1, longest_seq),  # Reshape into 2D mask
+            np.array(trg_masks).reshape(-1, longest_seq),  # Reshape to 2D mask
             longest_seq)
 
 
