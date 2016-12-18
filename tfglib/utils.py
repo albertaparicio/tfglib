@@ -48,13 +48,15 @@ def apply_context(input_matrix, context_size):
 
         elif (context_size - i) < 0:
             # replicated[0:context_size - i, i] = 0
-            replicated[replicated.shape[0] + (context_size - i):replicated.shape[0], i] = 0
+            replicated[
+            replicated.shape[0] + (context_size - i):replicated.shape[0], i] = 0
 
     return replicated
 
 
 def reshape_lstm(a, tsteps, data_dim):
-    """Zero-pad and reshape the input matrix 'a' so it can be fed into a stateful LSTM-based RNN"""
+    """Zero-pad and reshape the input matrix 'a' so it can be fed
+    into a stateful LSTM-based RNN"""
     # Compute the amount of zero-vectors that need to be added to the matrix
     zpad_size = int((np.ceil(a.shape[0] / tsteps) * tsteps) - a.shape[0])
 
@@ -66,3 +68,42 @@ def reshape_lstm(a, tsteps, data_dim):
 
     # Reshape training and test data
     return a.reshape((int(a.shape[0] / tsteps), tsteps, data_dim))
+
+
+def display_time(seconds, granularity=2):
+    """ This function converts an amount of seconds into minutes, hours, etc.
+
+    This code has been extracted from StackOverflow, posted by Ralph Bolton:
+    http://stackoverflow.com/a/38222840
+
+    As it has been posted after March 1, 2016, it is covered by the MIT License:
+    http://meta.stackexchange.com/q/272956
+
+    :param seconds: amount of seconds to be converted
+    :param granularity: precision of the date display (see the original post)
+    :return: converted time in weeks, days, hours, minutes and seconds,
+             depending on the granularity
+    """
+
+    intervals = (
+        ('weeks', 604800),  # 60 * 60 * 24 * 7
+        ('days', 86400),  # 60 * 60 * 24
+        ('hours', 3600),  # 60 * 60
+        ('minutes', 60),
+        ('seconds', 1),
+    )
+
+    result = []
+
+    for name, count in intervals:
+        value = seconds // count
+        if value:
+            seconds -= value * count
+            if value == 1:
+                name = name.rstrip('s')
+            result.append("{} {}".format(value, name))
+        else:
+            # Add a blank if we're in the middle of other values
+            if len(result) > 0:
+                result.append(None)
+    return ', '.join([x for x in result[:granularity] if x is not None])
