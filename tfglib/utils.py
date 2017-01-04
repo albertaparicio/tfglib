@@ -113,7 +113,7 @@ def display_time(seconds, granularity=2):
 
 def s2s_load_weights(model, filepath, mode):
     import h5py
-    from keras import backend as k
+    from keras import backend as K
     w_file = h5py.File(filepath, mode='r')
 
     # Model.load_weights_from_hdf5_group(model, file)
@@ -211,4 +211,4 @@ def s2s_load_weights(model, filepath, mode):
                     w = np.transpose(w, (2, 3, 1, 0))
                     weight_values[0] = w
             weight_value_tuples += zip(symbolic_weights, weight_values)
-        k.batch_set_value(weight_value_tuples)
+        K.batch_set_value(weight_value_tuples)
