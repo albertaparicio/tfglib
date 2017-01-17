@@ -10,6 +10,7 @@ from tfglib.utils import kronecker_delta
 
 
 def parse_file(param_len, file_path, offset=0):
+    # TODO Document the offset parameter
     """This function parses a vocoder data file.
 
     INPUTS:

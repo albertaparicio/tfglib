@@ -151,7 +151,8 @@ def s2s_load_weights(model, filepath, mode):
             offset = 0
 
         elif mode is 'decoder':
-            offset = 6
+            # offset = 6
+            offset = 5
 
         else:
             raise Exception("Unrecognized mode. Please choose 'encoder' or" +
