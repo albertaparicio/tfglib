@@ -111,7 +111,7 @@ def display_time(seconds, granularity=2):
     return ', '.join([x for x in result[:granularity] if x is not None])
 
 
-def s2s_load_weights(model, filepath, mode):
+def s2s_load_weights(model, filepath, offset=0):
     import h5py
     from keras import backend as K
     w_file = h5py.File(filepath, mode='r')
@@ -146,17 +146,6 @@ def s2s_load_weights(model, filepath, mode):
             if weights:
                 filtered_layers.append(layer)
                 indexes.append(index)
-
-        if mode is 'encoder':
-            offset = 0
-
-        elif mode is 'decoder':
-            # offset = 6
-            offset = 5
-
-        else:
-            raise Exception("Unrecognized mode. Please choose 'encoder' or" +
-                            " 'decoder' as a mode")
 
         indexes = [index + offset for index in indexes]
         flattened_layers = filtered_layers
