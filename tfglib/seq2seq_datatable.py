@@ -80,14 +80,14 @@ def seq2seq_build_file_table(
 
     # Check that source_dir and target_dir end in a '/'
     try:
-        assert source_dir[len(source_dir) - 1] == '/'
+        assert source_dir[-1] == '/'
     except AssertionError:
         print(
             "Please make sure the source data directory string ends with a '/'"
         )
 
     try:
-        assert target_dir[len(target_dir) - 1] == '/'
+        assert target_dir[-1] == '/'
     except AssertionError:
         print(
             "Please make sure the target data directory string ends with a '/'"
@@ -138,10 +138,10 @@ def seq2seq_build_file_table(
 
     # Initialize End-Of-Sequence flag
     src_eos_flag = np.zeros(source_vf.shape)
-    src_eos_flag[src_eos_flag.shape[0] - 1, :] = 1
+    src_eos_flag[-1, :] = 1
 
     trg_eos_flag = np.zeros(target_vf.shape)
-    trg_eos_flag[trg_eos_flag.shape[0] - 1, :] = 1
+    trg_eos_flag[-1, :] = 1
 
     # Initialize one-hot-encoded speaker indexes
     src_spk_index = to_categorical(
@@ -220,7 +220,7 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
 
     # Check that data_dir ends in a '/'
     try:
-        assert data_dir[len(data_dir) - 1] == '/'
+        assert data_dir[-1] == '/'
     except AssertionError:
         print("Please, make sure the data directory string ends with a '/'")
 
@@ -240,8 +240,8 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
 
     # Initialize datatables
     src_datatable = []
-    src_masks = []
     trg_datatable = []
+    src_masks = []
     trg_masks = []
 
     # Initialize maximum and minimum values matrices
@@ -252,9 +252,7 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
     for src_index, src_spk in enumerate(speakers):
         for trg_index, trg_spk in enumerate(speakers):
             for basename in basenames:
-                print(src_spk)
-                print(trg_spk)
-                print(basename)
+                print(src_spk + '->' + trg_spk + ' ' + basename)
 
                 (aux_src_params,
                  aux_src_mask,
@@ -269,17 +267,24 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
                     longest_seq
                 )
 
-                # Obtain maximum and minimum values of each parameter of each speaker
+                # Obtain maximum and minimum values of each speaker's parameter
                 # Mask parameters to avoid the zero-padded values
-                masked_params = np.ma.array(aux_src_params[:, 0:42], mask=1 - np.repeat(aux_src_mask, 42, axis=1))
+                masked_params = np.ma.array(
+                    aux_src_params[:, 0:42],
+                    mask=1 - np.repeat(aux_src_mask, 42, axis=1)
+                )
                 # Compute maximum and minimum values
-                spk_max[src_index, :] = np.maximum(spk_max[src_index, :], np.ma.max(masked_params, axis=0))
-                spk_min[src_index, :] = np.minimum(spk_min[src_index, :], np.ma.min(masked_params, axis=0))
+                spk_max[src_index, :] = np.maximum(
+                    spk_max[src_index, :], np.ma.max(masked_params, axis=0)
+                )
+                spk_min[src_index, :] = np.minimum(
+                    spk_min[src_index, :], np.ma.min(masked_params, axis=0)
+                )
 
                 # Append sequence params and masks to main datatables and masks
                 src_datatable.append(aux_src_params)
-                src_masks.append(aux_src_mask)
                 trg_datatable.append(aux_trg_params)
+                src_masks.append(aux_src_mask)
                 trg_masks.append(aux_trg_mask)
 
     return (np.array(src_datatable),
@@ -308,9 +313,14 @@ def seq2seq_save_datatable(data_dir, datatable_out_file):
 
     # Check that the data_dir ends in a '/'
     try:
-        assert data_dir[len(data_dir) - 1] == '/'
+        assert data_dir[-1] == '/'
     except AssertionError:
         print("Please, make sure the data directory string ends with a '/'")
+
+    try:
+        assert type(datatable_out_file) == str
+    except AssertionError:
+        print("Please, make sure the data output filename is a string")
 
     # Construct datatables and masks
     (source_datatable,
@@ -326,11 +336,11 @@ def seq2seq_save_datatable(data_dir, datatable_out_file):
         'seq2seq_basenames.list'
     )
 
-    # Save dataset names and dataset arrays for elegant iteration
+    # Save dataset names and dataset arrays for elegant iteration when saving
     data_dict = {
         'src_datatable': source_datatable,
-        'src_mask': source_masks,
         'trg_datatable': target_datatable,
+        'src_mask': source_masks,
         'trg_mask': target_masks
     }
 
@@ -378,8 +388,9 @@ def seq2seq2_load_datatable(datatable_file):
     with h5py.File(datatable_file, 'r') as file:
         # Load datasets
         source_datatable = file['src_datatable'][:, :]
-        source_masks = file['src_mask'][:, :]
         target_datatable = file['trg_datatable'][:, :]
+
+        source_masks = file['src_mask'][:, :]
         target_masks = file['trg_mask'][:, :]
 
         # Load max_seq_length attribute
