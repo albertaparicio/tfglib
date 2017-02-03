@@ -10,6 +10,7 @@ from keras.utils.np_utils import to_categorical
 from tfglib.construct_table import parse_file
 from tfglib.utils import kronecker_delta
 from tfglib.zero_pad import zero_pad_params
+from tfglib.seq2seq_normalize import mask_data
 
 
 def find_longest_sequence(data_dir, speakers_list, basenames_list):
@@ -269,10 +270,8 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
 
                 # Obtain maximum and minimum values of each speaker's parameter
                 # Mask parameters to avoid the zero-padded values
-                masked_params = np.ma.array(
-                    aux_src_params[:, 0:42],
-                    mask=1 - np.repeat(aux_src_mask, 42, axis=1)
-                )
+                masked_params = mask_data(aux_src_params[:, 0:42], aux_src_mask)
+
                 # Compute maximum and minimum values
                 spk_max[src_index, :] = np.maximum(
                     spk_max[src_index, :], np.ma.max(masked_params, axis=0)
