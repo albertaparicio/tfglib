@@ -1,3 +1,6 @@
+# Created by Albert Aparicio on 27/11/2016
+# coding: utf-8
+
 import numpy as np
 
 

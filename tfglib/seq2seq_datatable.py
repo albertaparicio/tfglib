@@ -7,10 +7,11 @@ from __future__ import print_function
 import h5py
 import numpy as np
 from keras.utils.np_utils import to_categorical
+
 from tfglib.construct_table import parse_file
+from tfglib.seq2seq_normalize import mask_data
 from tfglib.utils import kronecker_delta
 from tfglib.zero_pad import zero_pad_params
-from tfglib.seq2seq_normalize import mask_data
 
 
 def find_longest_sequence(data_dir, speakers_list, basenames_list):

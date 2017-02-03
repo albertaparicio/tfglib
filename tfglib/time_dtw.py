@@ -10,6 +10,7 @@
 from sys import argv
 
 import numpy as np
+
 from tfglib.construct_table import parse_file
 
 # Check that a file parameter has been passed
@@ -22,4 +23,10 @@ frames = 0.005 * parse_file(2, argv[1])
 sp = argv[1].split('.')
 
 # Output the resulting frames
-np.savetxt(sp[0] + '.frames.dtw', frames, fmt='%.3f', delimiter='\t', header='REF\tTST\n----\t----')
+np.savetxt(
+    sp[0] + '.frames.dtw',
+    frames,
+    fmt='%.3f',
+    delimiter='\t',
+    header='REF\tTST\n----\t----'
+)

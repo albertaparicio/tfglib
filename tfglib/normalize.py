@@ -9,6 +9,7 @@ from __future__ import print_function
 from sys import argv, exit
 
 import numpy as np
+
 from tfglib.construct_table import parse_file
 
 # Define usage constant
@@ -30,7 +31,12 @@ elif len(argv) == 4:
     normalized_data = (data - data_mean) / data_std
 
     # Output normalized data to file
-    np.savetxt(argv[1] + argv[2] + '.norm', normalized_data[:, 1:normalized_data.shape[1]], fmt='%.18f', delimiter='\t')
+    np.savetxt(
+        argv[1] + argv[2] + '.norm',
+        normalized_data[:, 1:normalized_data.shape[1]],
+        fmt='%.18f',
+        delimiter='\t'
+    )
 
 else:
     exit('Please, input two arguments as indicated in the usage.\n\n' + usage)
