@@ -4,6 +4,8 @@
 # This import makes Python use 'print' as in Python 3.x
 from __future__ import print_function
 
+from os.path import join as path_join
+
 import h5py
 import numpy as np
 from keras.utils.np_utils import to_categorical
@@ -20,18 +22,11 @@ def find_longest_sequence(data_dir, speakers_list, basenames_list):
 
     # Arguments
         data_dir: directory of data to be used in the datatable.
-                  This path must end in a '/'
         speakers_list: list of speakers to be used
         basenames_list: list of filenames to be used
 
     # Returns
         An integer with the number of frames of the longest sequence"""
-
-    # Check that data_dir ends in a '/'
-    try:
-        assert data_dir[len(data_dir) - 1] == '/'
-    except AssertionError:
-        print("Please, make sure the data directory string ends with a '/'")
 
     longest_sequence = 0
 
@@ -39,11 +34,12 @@ def find_longest_sequence(data_dir, speakers_list, basenames_list):
         for basename in basenames_list:
             params = parse_file(
                 1,
-                data_dir +
-                'vocoded_s2s/' +
-                speaker + '/' +
-                basename +
-                '.' + 'lf0' + '.dat'
+                path_join(
+                    data_dir,
+                    'vocoded_s2s',
+                    speaker,
+                    basename + '.' + 'lf0' + '.dat'
+                )
             )
 
             if params.shape[0] > longest_sequence:
@@ -71,8 +67,6 @@ def seq2seq_build_file_table(
         basename: name without extension of the file's params to be prepared
         longest_seq: number of frames of the longest sequence in the database
 
-        All directory paths must end in '/'
-
     # Returns
         - Zero-padded (by frames) source and target datatables
         - Source and target mask vectors indicating which frames are padded (0)
@@ -80,49 +74,41 @@ def seq2seq_build_file_table(
 
         The mask vectors are to be used in Keras' fit method"""
 
-    # Check that source_dir and target_dir end in a '/'
-    try:
-        assert source_dir[-1] == '/'
-    except AssertionError:
-        print(
-            "Please make sure the source data directory string ends with a '/'"
-        )
-
-    try:
-        assert target_dir[-1] == '/'
-    except AssertionError:
-        print(
-            "Please make sure the target data directory string ends with a '/'"
-        )
-
     # Parse parameter files
-    source_mcp = parse_file(40, source_dir + basename + '.' + 'mcp' + '.dat')
+    source_mcp = parse_file(40, path_join(
+        source_dir, basename + '.' + 'mcp' + '.dat'
+    ))
 
-    source_f0 = parse_file(1, source_dir + basename + '.' + 'lf0' + '.dat')
-    source_f0_i = parse_file(
-        1,
-        source_dir + basename + '.' + 'lf0' + '.i.dat'
-    )  # Interpolated data
+    source_f0 = parse_file(1, path_join(
+        source_dir, basename + '.' + 'lf0' + '.dat'
+    ))
+    source_f0_i = parse_file(1, path_join(
+        source_dir, basename + '.' + 'lf0' + '.i.dat'
+    ))  # Interpolated data
 
-    source_vf = parse_file(1, source_dir + basename + '.' + 'vf' + '.dat')
-    source_vf_i = parse_file(
-        1,
-        source_dir + basename + '.' + 'vf' + '.i.dat'
-    )  # Use interpolated data
+    source_vf = parse_file(1, path_join(
+        source_dir, basename + '.' + 'vf' + '.dat'
+    ))
+    source_vf_i = parse_file(1, path_join(
+        source_dir, basename + '.' + 'vf' + '.i.dat'
+    ))  # Use interpolated data
 
-    target_mcp = parse_file(40, target_dir + basename + '.' + 'mcp' + '.dat')
+    target_mcp = parse_file(40, path_join(
+        target_dir, basename + '.' + 'mcp' + '.dat'
+    ))
+    target_f0 = parse_file(1, path_join(
+        target_dir, basename + '.' + 'lf0' + '.dat'
+    ))
+    target_f0_i = parse_file(1, path_join(
+        target_dir, basename + '.' + 'lf0' + '.i.dat'
+    ))  # Interpolated data
 
-    target_f0 = parse_file(1, target_dir + basename + '.' + 'lf0' + '.dat')
-    target_f0_i = parse_file(
-        1,
-        target_dir + basename + '.' + 'lf0' + '.i.dat'
-    )  # Use interpolated data
-
-    target_vf = parse_file(1, target_dir + basename + '.' + 'vf' + '.dat')
-    target_vf_i = parse_file(
-        1,
-        target_dir + basename + '.' + 'vf' + '.i.dat'
-    )  # Use interpolated data
+    target_vf = parse_file(1, path_join(
+        target_dir, basename + '.' + 'vf' + '.dat'
+    ))
+    target_vf_i = parse_file(1, path_join(
+        target_dir, basename + '.' + 'vf' + '.i.dat'
+    ))  # Use interpolated data
 
     # Build voiced/unvoiced flag arrays
     # The flags are:
@@ -213,27 +199,19 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
         speakers_file: file with the list of speakers to be used
         basenames_file: file with the list of filenames to be used
 
-        The data_dir path must end in a '/'
-
     # Returns
         - Concatenated and zero-padded (by frames) source and target datatables
         - Source and target mask matrices indicating which frames
           are padded (0) and which of them are original from the data (1)"""
 
-    # Check that data_dir ends in a '/'
-    try:
-        assert data_dir[-1] == '/'
-    except AssertionError:
-        print("Please, make sure the data directory string ends with a '/'")
-
     # Parse speakers file
-    speakers = open(data_dir + speakers_file, 'r').readlines()
+    speakers = open(path_join(data_dir, speakers_file), 'r').readlines()
     # Strip '\n' characters
     speakers = [line.split('\n')[0] for line in speakers]
 
     # Parse basenames file
     # This file should be equal for all speakers
-    basenames = open(data_dir + basenames_file, 'r').readlines()
+    basenames = open(path_join(data_dir, basenames_file), 'r').readlines()
     # Strip '\n' characters
     basenames = [line.split('\n')[0] for line in basenames]
 
@@ -261,9 +239,9 @@ def seq2seq_construct_datatable(data_dir, speakers_file, basenames_file):
                  aux_trg_params,
                  aux_trg_mask
                  ) = seq2seq_build_file_table(
-                    data_dir + 'vocoded_s2s/' + src_spk + '/',
+                    path_join(data_dir, 'vocoded_s2s', src_spk),
                     src_index,
-                    data_dir + 'vocoded_s2s/' + trg_spk + '/',
+                    path_join(data_dir, 'vocoded_s2s', trg_spk),
                     trg_index,
                     basename,
                     longest_seq
@@ -310,12 +288,6 @@ def seq2seq_save_datatable(data_dir, datatable_out_file):
         - Concatenated and zero-padded (by frames) source and target datatables
         - Source and target mask matrices indicating which frames
           are padded (0) and which of them are original from the data (1)"""
-
-    # Check that the data_dir ends in a '/'
-    try:
-        assert data_dir[-1] == '/'
-    except AssertionError:
-        print("Please, make sure the data directory string ends with a '/'")
 
     try:
         assert type(datatable_out_file) == str
