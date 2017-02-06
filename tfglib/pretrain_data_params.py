@@ -21,6 +21,7 @@ def pretrain_save_data_parameters(data_dir):
     print('Starting')
 
     longest_sequence = 0
+    files_list = []
 
     num_spk = len([entry for entry in os.scandir(data_dir) if entry.is_dir()])
 
