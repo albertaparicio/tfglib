@@ -63,7 +63,11 @@ def replicate_frames(params_mat, max_seq_length, values, probabilities):
     return src_res, trg_res, src_mask, trg_mask
 
 
-def pretrain_save_data_parameters(data_dir, speakers_file='speakers.list'):
+def pretrain_save_data_parameters(
+        data_dir,
+        speakers_file='speakers.list',
+        params_file='pretrain_params.h5',
+):
     # TODO Document this function
     # Save processing start time
     start_time = time()
@@ -133,7 +137,7 @@ def pretrain_save_data_parameters(data_dir, speakers_file='speakers.list'):
 
     print('Saving data to .h5 file')
 
-    with File(os.path.join(data_dir, 'pretrain_params.h5'), 'w') as f:
+    with File(os.path.join(data_dir, params_file), 'w') as f:
         # Save longest_sequence and the max and min values as attributes
         f.attrs.create('longest_sequence', longest_sequence, dtype=int)
         f.attrs.create('speakers_max', spk_max)
