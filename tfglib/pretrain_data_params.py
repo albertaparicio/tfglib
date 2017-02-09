@@ -165,7 +165,7 @@ def pretrain_save_data_parameters(
     return longest_sequence, spk_max, spk_min
 
 
-def pretrain_load_data_parameters(data_dir, params_file):
+def pretrain_load_data_parameters(data_dir, params_file='pretrain_params.h5'):
     # TODO Document this function
     # Load data from .h5 file
     with File(os.path.join(data_dir, params_file), 'r') as file:
@@ -178,7 +178,9 @@ def pretrain_load_data_parameters(data_dir, params_file):
 
         file.close()
 
-    return longest_sequence, spk_max, spk_min, files_list
+    # Increase the size of the maximum sequence length, to allow the
+    # longest sequence's frames to be replicated when training
+    return int(np.floor(longest_sequence * 1.3)), spk_max, spk_min, files_list
 
 
 def pretrain_train_generator(
@@ -201,7 +203,7 @@ def pretrain_train_generator(
 
     # Increase the size of the maximum sequence length, to allow the
     # longest sequence's frames to be replicated
-    longest_sequence = np.floor(longest_sequence * 1.3)
+    # longest_sequence = np.floor(longest_sequence * 1.3)
 
     # Take the files for training or for validation
     if validation:
@@ -218,7 +220,7 @@ def pretrain_train_generator(
 
         f.close()
 
-    while 1:
+    while True:
         # Iterate over files list
         for basename in files_list:
             # Compute speaker index
@@ -244,8 +246,8 @@ def pretrain_train_generator(
             ) - src_spk_min) / (src_spk_max - src_spk_min)
 
             # One-hot encode the speaker indexes
-            spk_onehot = np.repeat(
-                to_categorical(spk_index, nb_classes=len(speakers)),
+            spk_index_vector = np.repeat(
+                spk_index,
                 lf0_params.shape[0],
                 axis=0
             )
@@ -259,8 +261,8 @@ def pretrain_train_generator(
                 src_normalized,
                 uv_flags,
                 eos_flags,
-                spk_onehot,
-                spk_onehot
+                spk_index_vector,
+                spk_index_vector
             ), axis=1)
 
             # Replicate frames with dtw probabilities
@@ -272,4 +274,4 @@ def pretrain_train_generator(
             )
 
             # Flip frames and return them
-            yield (np.fliplr(src_res), trg_res, np.fliplr(src_mask))
+            yield (np.fliplr(src_res), trg_res, src_mask)
