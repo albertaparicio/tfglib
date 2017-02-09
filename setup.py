@@ -6,17 +6,23 @@ https://github.com/pypa/sampleproject
 """
 
 # Always prefer setuptools over distutils
-from setuptools import setup
-# from setuptools import find_packages
-# To use a consistent encoding
 from codecs import open
 from os import path
+from sys import version_info
+
+from setuptools import setup
 
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
+
+# Check if running version is 3.5 or later. If not, we need the scandir package
+if version_info.major == 3 and version_info.minor >= 5:
+    install_requires = ['h5py', 'numpy', 'matplotlib', 'keras'],
+else:
+    install_requires = ['h5py', 'numpy', 'matplotlib', 'keras', 'scandir'],
 
 setup(
     name='tfglib',
@@ -79,15 +85,15 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['h5py', 'numpy', 'matplotlib', 'keras'],
+    install_requires=install_requires,
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
     # $ pip install -e .[dev,test]
     # extras_require={
-        # 'dev': ['check-manifest'],
-        # 'test': ['coverage'],
+    # 'dev': ['check-manifest'],
+    # 'test': ['coverage'],
     # },
 
     # If there are data files included in your packages that need to be
@@ -107,8 +113,8 @@ setup(
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     # entry_points={
-        # 'console_scripts': [
-            # 'sample=sample:main',
-        # ],
+    # 'console_scripts': [
+    # 'sample=sample:main',
+    # ],
     # },
 )

@@ -14,10 +14,10 @@ from h5py import special_dtype, File
 from tfglib.construct_table import parse_file
 from tfglib.utils import display_time, int2pair
 
-if version_info.major == 3:
+if version_info.major == 3 and version_info.minor >= 5:
     from os import scandir
 else:
-    import scandir
+    from scandir import scandir
 
 
 def replicate_frames(params_mat, max_seq_length, values, probabilities):
