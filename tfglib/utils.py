@@ -21,6 +21,7 @@ import sys
 import time
 
 import numpy as np
+from keras.backend import reverse
 
 
 def kronecker_delta(x):
@@ -219,6 +220,14 @@ def s2s_load_weights(model, filepath, offset=0):
                     weight_values[0] = w
             weight_value_tuples += zip(symbolic_weights, weight_values)
         K.batch_set_value(weight_value_tuples)
+
+
+def reverse_encoder_output(input_tensor):
+    return reverse(input_tensor, axes=0)
+
+
+def reversed_output_shape(input_shape):
+    return input_shape
 
 
 class Progbar(object):
