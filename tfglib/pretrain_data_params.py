@@ -5,14 +5,17 @@
 from __future__ import print_function
 
 import os
+from sys import version_info
 from time import time
 
 import numpy as np
 from h5py import special_dtype, File
-from keras.utils.np_utils import to_categorical
 
 from tfglib.construct_table import parse_file
 from tfglib.utils import display_time, int2pair
+
+if version_info.major == 2:
+    import scandir
 
 
 def replicate_frames(params_mat, max_seq_length, values, probabilities):
@@ -162,7 +165,7 @@ def pretrain_save_data_parameters(
 
     print('Elapsed time: ' + display_time(time() - start_time))
 
-    return longest_sequence, spk_max, spk_min
+    return int(np.floor(longest_sequence * 1.3)), spk_max, spk_min, files_list
 
 
 def pretrain_load_data_parameters(data_dir, params_file='pretrain_params.h5'):
