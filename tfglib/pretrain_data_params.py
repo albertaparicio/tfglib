@@ -14,7 +14,9 @@ from h5py import special_dtype, File
 from tfglib.construct_table import parse_file
 from tfglib.utils import display_time, int2pair
 
-if version_info.major == 2:
+if version_info.major == 3:
+    from os import scandir
+else:
     import scandir
 
 
@@ -80,7 +82,7 @@ def pretrain_save_data_parameters(
     longest_sequence = 0
     files_list = []
 
-    num_spk = len([entry for entry in os.scandir(data_dir) if entry.is_dir()])
+    num_spk = len([entry for entry in scandir(data_dir) if entry.is_dir()])
 
     spk_max = np.zeros((num_spk, 42))
     spk_min = 1e+50 * np.ones((num_spk, 42))
