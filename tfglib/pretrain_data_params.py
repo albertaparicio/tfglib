@@ -65,7 +65,8 @@ def replicate_frames(params_mat, max_seq_length, values, probabilities):
             ))
         ))
 
-    return src_res, trg_res, src_mask, trg_mask
+    # Target data must have 44 parameters
+    return src_res, trg_res[:, 0:44], src_mask, trg_mask
 
 
 def pretrain_save_data_parameters(
@@ -190,33 +191,87 @@ def pretrain_load_data_parameters(data_dir, params_file='pretrain_params.h5'):
 
 def pretrain_train_generator(
         params_path,
-        dtw_prob_file,
+        batch_size,
         params_file='pretrain_params.h5',
-        speakers_file='speakers.list',
-        basename_len=11,
         validation=False,
-        val_fraction=None
+        val_fraction=0.25,
 ):
     # TODO Document this function
-    speakers = open(os.path.join(params_path, speakers_file), 'r').readlines()
-    # Strip '\n' characters
-    speakers = [line.split('\n')[0] for line in speakers]
 
     # Read data from .h5 files
     (longest_sequence, spk_max, spk_min, files_list
      ) = pretrain_load_data_parameters(params_path, params_file)
 
-    # Increase the size of the maximum sequence length, to allow the
-    # longest sequence's frames to be replicated
-    # longest_sequence = np.floor(longest_sequence * 1.3)
-
     # Take the files for training or for validation
     if validation:
         # Take the validation fraction from the end of the list
-        files_list = files_list[int(np.floor(-val_fraction * len(files_list))):]
+        files_list = files_list[
+                     int(np.floor(-1 * val_fraction * len(files_list))):
+                     ]
     else:
         # Take from the beginning of the list until the validation fraction
-        files_list = files_list[:int(np.floor(-val_fraction * len(files_list)))]
+        files_list = files_list[
+                     :int(np.floor(-1 * val_fraction * len(files_list)))
+                     ]
+
+    # Initialize slices generator
+    pretrain_slice = prepare_pretrain_slice(
+        files_list,
+        params_path,
+        longest_sequence,
+        spk_max,
+        spk_min
+    )
+
+    while True:
+        # Initialize batch
+        main_input = np.empty((batch_size, longest_sequence, 44))
+        src_spk_in = np.empty((batch_size, longest_sequence))
+        trg_spk_in = np.empty((batch_size, longest_sequence))
+        feedback_in = np.empty((batch_size, longest_sequence, 44))
+        params_output = np.empty((batch_size, longest_sequence, 42))
+        flags_output = np.empty((batch_size, longest_sequence, 2))
+        sample_weights = np.empty((batch_size, longest_sequence, 1))
+
+        for i in range(batch_size):
+            (
+                main_input[i, :, :],
+                src_spk_in[i, :],
+                trg_spk_in[i, :],
+                feedback_in[i, :, :],
+                params_output[i, :, :],
+                flags_output[i, :, :],
+                sample_weights[i, :]
+            ) = next(pretrain_slice)
+
+        yield (
+            {
+                'main_input': main_input,
+                'src_spk_in': src_spk_in,
+                'trg_spk_in': trg_spk_in,
+                'feedback_in': feedback_in
+            },
+            {
+                'params_output': params_output,
+                'flags_output': flags_output
+            },
+            {'sample_weights': sample_weights}
+        )
+
+
+def prepare_pretrain_slice(
+        files_list,
+        params_path,
+        longest_sequence,
+        spk_max,
+        spk_min,
+        speakers_file='speakers.list',
+        dtw_prob_file='dtw_probabilities.h5',
+        basename_len=11,
+):
+    speakers = open(os.path.join(params_path, speakers_file), 'r').readlines()
+    # Strip '\n' characters
+    speakers = [line.split('\n')[0] for line in speakers]
 
     with File(os.path.join(params_path, dtw_prob_file), 'r') as f:
         # Save numbers and probabilities
@@ -265,18 +320,31 @@ def pretrain_train_generator(
             seq_params = np.concatenate((
                 src_normalized,
                 uv_flags,
-                eos_flags,
-                spk_index_vector,
-                spk_index_vector
+                np.reshape(eos_flags, (-1, 1)),
+                np.reshape(spk_index_vector, (-1, 1)),
+                np.reshape(spk_index_vector, (-1, 1)),
             ), axis=1)
 
             # Replicate frames with dtw probabilities
-            (src_res, trg_res, src_mask, trg_mask) = replicate_frames(
+            (src_res, trg_res, _, trg_mask) = replicate_frames(
                 seq_params,
                 longest_sequence,
                 values,
                 probabilities
             )
 
-            # Flip frames and return them
-            yield (np.fliplr(src_res), trg_res, src_mask)
+            # Prepare feedback data
+            feedback_data = np.roll(trg_res, 1, axis=0)
+            feedback_data[0, :] = 0
+
+            # Flip slice frames and return them
+            print('Sliced ' + basename)
+            yield (
+                np.fliplr(src_res[:, 0:44]),
+                np.fliplr(src_res[:, 44:45]).reshape((-1)),
+                np.fliplr(src_res[:, 45:46]).reshape((-1)),
+                feedback_data,
+                trg_res[:, 0:42],
+                trg_res[:, 42:44],
+                trg_mask
+            )
