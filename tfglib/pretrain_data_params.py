@@ -281,22 +281,38 @@ def prepare_pretrain_slice(
 
         f.close()
 
-    while True:
-        # Shuffle files_list before each epoch
-        shuffle(files_list)
+    # Read all files to have them loaded in memory
+    mcp_params = []
+    lf0_params = []
+    mvf_params = []
+    uv_flags = []
 
-        # Iterate over files list
-        for basename in files_list:
+    for basename in files_list:
+        mcp_params.append(parse_file(40, basename + '.cc'))
+        lf0_params.append(parse_file(1, basename + '.lf0_log'))
+        mvf_params.append(parse_file(1, basename + '.i.fv'))
+        uv_flags.append(parse_file(1, basename + '.lf0_log.uv_mask'))
+
+    # Initialize file indexes
+    indexes = np.arange(len(files_list))
+
+    while True:
+        # Shuffle file indexs before each epoch
+        np.random.shuffle(indexes)
+
+        # Iterate over shuffled files
+        for file_index in indexes:
             # Compute speaker index
+            basename = files_list[file_index]
             spk_index = speakers.index(
                 str(basename[-1 * (basename_len + 3):-1 * (basename_len + 1)])
             )
 
-            # Read parameters
-            mcp_params = parse_file(40, basename + '.cc')
-            lf0_params = parse_file(1, basename + '.lf0_log')
-            mvf_params = parse_file(1, basename + '.i.fv')
-            uv_flags = parse_file(1, basename + '.lf0_log.uv_mask')
+            # # Read parameters
+            # mcp_params = parse_file(40, basename + '.cc')
+            # lf0_params = parse_file(1, basename + '.lf0_log')
+            # mvf_params = parse_file(1, basename + '.i.fv')
+            # uv_flags = parse_file(1, basename + '.lf0_log.uv_mask')
 
             # Get max and min values for each speaker
             src_spk_max = spk_max[spk_index, :]
@@ -304,32 +320,33 @@ def prepare_pretrain_slice(
 
             # Maxmin normalize
             src_normalized = (np.concatenate((
-                mcp_params,
-                lf0_params,
-                mvf_params), axis=1
-            ) - src_spk_min) / (src_spk_max - src_spk_min)
+                mcp_params[file_index],
+                lf0_params[file_index],
+                mvf_params[file_index]
+            ), axis=1) - src_spk_min) / (src_spk_max - src_spk_min)
 
             # One-hot encode the speaker indexes
             spk_index_vector = np.repeat(
                 spk_index,
-                lf0_params.shape[0],
+                lf0_params[file_index].shape[0],
                 axis=0
             )
 
             # Construct End-Of-Sequence flags
-            eos_flags = np.zeros(lf0_params.shape[0])
+            eos_flags = np.zeros(lf0_params[file_index].shape[0])
             eos_flags[-1] = 1
 
             # Construct sequence "slice"
             seq_params = np.concatenate((
                 src_normalized,
-                uv_flags,
+                uv_flags[file_index],
                 np.reshape(eos_flags, (-1, 1)),
                 np.reshape(spk_index_vector, (-1, 1)),
                 np.reshape(spk_index_vector, (-1, 1)),
             ), axis=1)
 
             # Replicate frames with dtw probabilities
+            # TODO Change the function so it takes seq_params as separate args
             (src_res, trg_res, _, trg_mask) = replicate_frames(
                 seq_params,
                 longest_sequence,
