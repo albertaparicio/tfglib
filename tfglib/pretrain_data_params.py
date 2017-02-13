@@ -342,7 +342,7 @@ def prepare_pretrain_slice(
             feedback_data[0, :] = 0
 
             # Flip slice frames and return them
-            print('Sliced ' + basename)
+            # print('Sliced ' + basename)
             yield (
                 np.fliplr(src_res[:, 0:44]),
                 np.fliplr(src_res[:, 44:45]).reshape((-1)),
