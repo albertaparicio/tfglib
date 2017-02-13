@@ -1,5 +1,5 @@
-# coding: utf-8
 # Created by albert aparicio on 16/11/16
+# coding: utf-8
 
 # Normalize mcp coefficients by their mean and variance
 

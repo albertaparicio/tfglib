@@ -5,6 +5,7 @@
 from __future__ import print_function
 
 import os
+from random import shuffle
 from sys import version_info
 from time import time
 
@@ -281,6 +282,9 @@ def prepare_pretrain_slice(
         f.close()
 
     while True:
+        # Shuffle files_list before each epoch
+        shuffle(files_list)
+
         # Iterate over files list
         for basename in files_list:
             # Compute speaker index
