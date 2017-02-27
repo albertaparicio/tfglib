@@ -269,6 +269,7 @@ def prepare_pretrain_slice(
         speakers_file='speakers.list',
         dtw_prob_file='dtw_probabilities.h5',
         basename_len=11,
+        shuffle_files=True
 ):
     speakers = open(os.path.join(params_path, speakers_file), 'r').readlines()
     # Strip '\n' characters
@@ -297,8 +298,9 @@ def prepare_pretrain_slice(
     indexes = np.arange(len(files_list))
 
     while True:
-        # Shuffle file indexs before each epoch
-        np.random.shuffle(indexes)
+        if shuffle_files:
+            # Shuffle file indexs before each epoch
+            np.random.shuffle(indexes)
 
         # Iterate over shuffled files
         for file_index in indexes:
