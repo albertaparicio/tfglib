@@ -223,7 +223,7 @@ def s2s_load_weights(model, filepath, offset=0):
 
 
 def reverse_encoder_output(input_tensor):
-    return reverse(input_tensor, axes=0)
+    return reverse(input_tensor, axes=1)
 
 
 def reversed_output_shape(input_shape):
