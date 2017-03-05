@@ -196,6 +196,7 @@ def pretrain_train_generator(
         params_file='pretrain_params.h5',
         validation=False,
         val_fraction=0.25,
+        basename_len=11
 ):
     # TODO Document this function
 
@@ -221,7 +222,8 @@ def pretrain_train_generator(
         params_path,
         longest_sequence,
         spk_max,
-        spk_min
+        spk_min,
+        basename_len=basename_len
     )
 
     while True:
@@ -290,9 +292,9 @@ def prepare_pretrain_slice(
 
     for basename in files_list:
         mcp_params.append(parse_file(40, basename + '.cc'))
-        lf0_params.append(parse_file(1, basename + '.lf0_log'))
-        mvf_params.append(parse_file(1, basename + '.i.fv'))
-        uv_flags.append(parse_file(1, basename + '.lf0_log.uv_mask'))
+        lf0_params.append(parse_file(1,  basename + '.lf0_log'))
+        mvf_params.append(parse_file(1,  basename + '.i.fv'))
+        uv_flags.append(parse_file(1,    basename + '.lf0_log.uv_mask'))
 
     # Initialize file indexes
     indexes = np.arange(len(files_list))
@@ -306,6 +308,7 @@ def prepare_pretrain_slice(
         for file_index in indexes:
             # Compute speaker index
             basename = files_list[file_index]
+
             spk_index = speakers.index(
                 str(basename[-1 * (basename_len + 3):-1 * (basename_len + 1)])
             )
