@@ -169,7 +169,7 @@ def pretrain_save_data_parameters(
 
     print('Elapsed time: ' + display_time(time() - start_time))
 
-    return int(np.floor(longest_sequence * 1.3)), spk_max, spk_min, files_list
+    return int(np.floor(longest_sequence * 1.7)), spk_max, spk_min, files_list
 
 
 def pretrain_load_data_parameters(data_dir, params_file='pretrain_params.h5'):
@@ -187,7 +187,7 @@ def pretrain_load_data_parameters(data_dir, params_file='pretrain_params.h5'):
 
     # Increase the size of the maximum sequence length, to allow the
     # longest sequence's frames to be replicated when training
-    return int(np.floor(longest_sequence * 1.3)), spk_max, spk_min, files_list
+    return int(np.floor(longest_sequence * 1.7)), spk_max, spk_min, files_list
 
 
 def pretrain_train_generator(
