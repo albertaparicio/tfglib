@@ -363,12 +363,12 @@ def prepare_pretrain_slice(
             feedback_data = np.roll(trg_res, 1, axis=0)
             feedback_data[0, :] = 0
 
-            # Flip slice frames and return them
+            # Return slice frames
             # print('Sliced ' + basename)
             yield (
-                np.fliplr(src_res[:, 0:44]),
-                np.fliplr(src_res[:, 44:45]).reshape((-1)),
-                np.fliplr(src_res[:, 45:46]).reshape((-1)),
+                src_res[:, 0:44],
+                src_res[:, 44:45].reshape((-1)),
+                src_res[:, 45:46].reshape((-1)),
                 feedback_data,
                 trg_res[:, 0:42],
                 trg_res[:, 42:44],
