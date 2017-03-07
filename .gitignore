@@ -243,3 +243,4 @@ nytprof.out
 *.o
 *.bs
 /_eumm/
+/unused_stuff/
