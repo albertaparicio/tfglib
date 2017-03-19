@@ -196,7 +196,8 @@ def pretrain_train_generator(
         params_file='pretrain_params.h5',
         validation=False,
         val_fraction=0.25,
-        basename_len=11
+        basename_len=11,
+        replicate=True
 ):
     # TODO Document this function
 
@@ -223,7 +224,8 @@ def pretrain_train_generator(
         longest_sequence,
         spk_max,
         spk_min,
-        basename_len=basename_len
+        basename_len=basename_len,
+        replicate=replicate
     )
 
     while True:
@@ -271,7 +273,8 @@ def prepare_pretrain_slice(
         speakers_file='speakers.list',
         dtw_prob_file='dtw_probabilities.h5',
         basename_len=11,
-        shuffle_files=True
+        shuffle_files=True,
+        replicate=True
 ):
     speakers = open(os.path.join(params_path, speakers_file), 'r').readlines()
     # Strip '\n' characters
@@ -350,14 +353,19 @@ def prepare_pretrain_slice(
                 np.reshape(spk_index_vector, (-1, 1)),
             ), axis=1)
 
-            # Replicate frames with dtw probabilities
-            # TODO Change the function so it takes seq_params as separate args
-            (src_res, trg_res, _, trg_mask) = replicate_frames(
-                seq_params,
-                longest_sequence,
-                values,
-                probabilities
-            )
+            if replicate:
+                # Replicate frames with dtw probabilities
+                # TODO Change the function so it takes seq_params as separate args
+                (src_res, trg_res, _, trg_mask) = replicate_frames(
+                    seq_params,
+                    longest_sequence,
+                    values,
+                    probabilities
+                )
+            else:
+                src_res=seq_params
+                trg_res=seq_params[:,0:44]
+                trg_mask=np.ones((seq_params.shape[0],1))
 
             # Prepare feedback data
             feedback_data = np.roll(trg_res, 1, axis=0)
