@@ -168,8 +168,9 @@ def pretrain_save_data_parameters(
         f.close()
 
     print('Elapsed time: ' + display_time(time() - start_time))
+    longest_sequence = int(np.floor(longest_sequence * 1.7))
 
-    return int(np.floor(longest_sequence * 1.7)), spk_max, spk_min, files_list
+    return longest_sequence, spk_max, spk_min, files_list
 
 
 def pretrain_load_data_parameters(data_dir, params_file='pretrain_params.h5'):
@@ -187,7 +188,9 @@ def pretrain_load_data_parameters(data_dir, params_file='pretrain_params.h5'):
 
     # Increase the size of the maximum sequence length, to allow the
     # longest sequence's frames to be replicated when training
-    return int(np.floor(longest_sequence * 1.7)), spk_max, spk_min, files_list
+    longest_sequence = int(np.floor(longest_sequence * 1.7))
+
+    return longest_sequence, spk_max, spk_min, files_list
 
 
 def pretrain_train_generator(
@@ -363,9 +366,21 @@ def prepare_pretrain_slice(
                     probabilities
                 )
             else:
-                src_res=seq_params
-                trg_res=seq_params[:,0:44]
-                trg_mask=np.ones((seq_params.shape[0],1))
+                src_res = np.concatenate((seq_params, np.zeros((
+                    longest_sequence - seq_params.shape[0],
+                    seq_params.shape[1]
+                ))))
+                trg_res = np.concatenate((seq_params[:, 0:44], np.zeros((
+                    longest_sequence - seq_params.shape[0],
+                    44
+                ))))
+                trg_mask = np.concatenate((
+                    np.ones((seq_params.shape[0], 1)),
+                    np.zeros((
+                        longest_sequence - seq_params.shape[0],
+                        1
+                    ))
+                ))
 
             # Prepare feedback data
             feedback_data = np.roll(trg_res, 1, axis=0)
