@@ -129,6 +129,31 @@ def display_time(seconds, granularity=2):
     return ', '.join([x for x in result[:granularity] if x is not None])
 
 
+def init_logger(name, level=10,
+                log_fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s'):
+    """level=10 - DEBUG"""
+    import logging
+
+    # Initialize logger
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(level)
+
+    # create formatter
+    formatter = logging.Formatter(log_fmt)
+
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # add ch to logger
+    logger.addHandler(ch)
+
+    return logger
+
+
 def s2s_load_weights(model, filepath, offset=0):
     import h5py
     from keras import backend as K
