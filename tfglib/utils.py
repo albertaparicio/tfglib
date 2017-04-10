@@ -129,18 +129,17 @@ def display_time(seconds, granularity=2):
     return ', '.join([x for x in result[:granularity] if x is not None])
 
 
-def init_logger(name, level=10,
+def init_logger(name, level='INFO',
                 log_fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s'):
-    """level=10 - DEBUG"""
     import logging
 
     # Initialize logger
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+    logger.setLevel(logging._nameToLevel[level.upper()])
 
     # create console handler and set level to debug
     ch = logging.StreamHandler()
-    ch.setLevel(level)
+    ch.setLevel(logging._nameToLevel[level.upper()])
 
     # create formatter
     formatter = logging.Formatter(log_fmt)
