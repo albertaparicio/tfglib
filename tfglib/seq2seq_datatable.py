@@ -12,7 +12,7 @@ from keras.utils.np_utils import to_categorical
 
 from tfglib.construct_table import parse_file
 from tfglib.seq2seq_normalize import mask_data
-from tfglib.utils import kronecker_delta
+from tfglib.utils import kronecker_delta, sliding_window
 from tfglib.zero_pad import zero_pad_params
 
 
@@ -52,6 +52,7 @@ class Seq2SeqDatatable(object):
     # Strip '\n' characters
     self.basenames = [line.split('\n')[0] for line in basenames]
 
+    self.shortseq = shortseq
     if shortseq:
       self.max_seq_length = max_seq_length
     else:
@@ -111,113 +112,151 @@ class Seq2SeqDatatable(object):
         The mask vectors are to be used in Keras' fit method"""
 
     # Parse parameter files
-    source_mcp = parse_file(40, path_join(
-        source_dir, basename + '.' + 'mcp' + '.dat'
-        ))
+    settings_dict = {'source':
+                       {'dir'   : source_dir,
+                        'params':
+                          {
+                            'mcp'  : 40,
+                            'lf0'  : 1,
+                            'lf0.i': 1,
+                            'vf'   : 1,
+                            'vf.i' : 1
+                            }
+                        },
+                     'target':
+                       {'dir'   : target_dir,
+                        'params':
+                          {
+                            'mcp'  : 40,
+                            'lf0'  : 1,
+                            'lf0.i': 1,
+                            'vf'   : 1,
+                            'vf.i' : 1
+                            },
+                        }
+                     }
 
-    source_f0 = parse_file(1, path_join(
-        source_dir, basename + '.' + 'lf0' + '.dat'
-        ))
-    source_f0_i = parse_file(1, path_join(
-        source_dir, basename + '.' + 'lf0' + '.i.dat'
-        ))  # Interpolated data
+    params_dict = {}
 
-    source_vf = parse_file(1, path_join(
-        source_dir, basename + '.' + 'vf' + '.dat'
-        ))
-    source_vf_i = parse_file(1, path_join(
-        source_dir, basename + '.' + 'vf' + '.i.dat'
-        ))  # Use interpolated data
-
-    target_mcp = parse_file(40, path_join(
-        target_dir, basename + '.' + 'mcp' + '.dat'
-        ))
-    target_f0 = parse_file(1, path_join(
-        target_dir, basename + '.' + 'lf0' + '.dat'
-        ))
-    target_f0_i = parse_file(1, path_join(
-        target_dir, basename + '.' + 'lf0' + '.i.dat'
-        ))  # Interpolated data
-
-    target_vf = parse_file(1, path_join(
-        target_dir, basename + '.' + 'vf' + '.dat'
-        ))
-    target_vf_i = parse_file(1, path_join(
-        target_dir, basename + '.' + 'vf' + '.i.dat'
-        ))  # Use interpolated data
+    for src_trg_key, src_trg_dict in settings_dict.items():
+      for extension, param_len in src_trg_dict['params'].items():
+        params_dict[src_trg_key][extension] = parse_file(
+            param_len,
+            path_join(src_trg_dict['dir'], basename + '.' + extension + '.dat')
+            )
 
     # Build voiced/unvoiced flag arrays
     # The flags are:
     #   1 -> voiced
     #   0 -> unvoiced
-    assert source_vf.shape == source_f0.shape
-    source_voiced = np.empty(source_vf.shape)
-    for index, vf in enumerate(source_vf):
-      source_voiced[index] = 1 - kronecker_delta(source_vf[index])
+    assert params_dict['source']['vf'].shape == params_dict['source'][
+      'lf0'].shape
+    params_dict['source']['uv'] = np.empty(params_dict['source']['vf'].shape)
 
-    assert target_vf.shape == target_f0.shape
-    target_voiced = np.empty(target_vf.shape)
-    for index, vf in enumerate(target_vf):
-      target_voiced[index] = 1 - kronecker_delta(target_vf[index])
+    for index, vf in enumerate(params_dict['source']['vf']):
+      params_dict['source']['uv'][index] = 1 - kronecker_delta(
+          params_dict['source']['vf'][index])
 
-    # Initialize End-Of-Sequence flag
-    src_eos_flag = np.zeros(source_vf.shape)
-    src_eos_flag[-1, :] = 1
+    assert params_dict['target']['vf'].shape == params_dict['target'][
+      'lf0'].shape
+    params_dict['target']['uv'] = np.empty(params_dict['target']['vf'].shape)
 
-    trg_eos_flag = np.zeros(target_vf.shape)
-    trg_eos_flag[-1, :] = 1
+    for index, vf in enumerate(params_dict['target']['vf']):
+      params_dict['target']['uv'][index] = 1 - kronecker_delta(
+          params_dict['target']['vf'][index])
 
-    # Initialize one-hot-encoded speaker indexes
-    src_spk_index = to_categorical(
-        src_index * np.ones((source_vf.shape[0],), dtype=int), 10)
-    trg_spk_index = to_categorical(
-        trg_index * np.ones((target_vf.shape[0],), dtype=int), 10)
+    if self.shortseq:
 
-    # Initialize padding masks, to be passed into keras' fit
-    # Source mask
-    source_mask = np.concatenate((
-      np.zeros((
-        self.max_seq_length - source_mcp.shape[0],
-        1
-        )),
-      np.ones((
-        source_mcp.shape[0],
-        1
+      split_params = {}
+      # Split parameter vectors into chunks of size self.max_seq_length, with a
+      # superposition of self.max_seq_length/2
+      for origin, param_types in params_dict.items():
+        for param_type, parameters in param_types.items():
+          split_params[origin][param_type] = np.array(list(
+              sliding_window(
+                  parameters, self.max_seq_length, int(self.max_seq_length / 2)
+                  )))
+
+      # TODO Initialize an EOS flag vector for each sub-sequence
+
+      # TODO Assign a speaker index vector to each sub-sequence
+
+      # TODO Initialize masks for each sequence
+
+      # TODO Pad the sub-sequences (only the last sub-sequence will be padded)
+
+      pass
+
+    else:
+
+      # Initialize End-Of-Sequence flag
+      src_eos_flag = np.zeros(params_dict['source']['vf'].shape)
+      src_eos_flag[-1, :] = 1
+
+      trg_eos_flag = np.zeros(params_dict['target']['vf'].shape)
+      trg_eos_flag[-1, :] = 1
+
+      # Initialize one-hot-encoded speaker indexes
+      src_spk_index = to_categorical(
+          src_index * np.ones((params_dict['source']['vf'].shape[0],),
+                              dtype=int), 10)
+      trg_spk_index = to_categorical(
+          trg_index * np.ones((params_dict['target']['vf'].shape[0],),
+                              dtype=int), 10)
+
+      # Initialize padding masks, to be passed into keras' fit
+      # Source mask
+      source_mask = np.concatenate((
+        np.zeros((
+          self.max_seq_length - params_dict['source']['mcp'].shape[0],
+          1
+          )),
+        np.ones((
+          params_dict['source']['mcp'].shape[0],
+          1
+          ))
         ))
-      ))
 
-    # Target mask
-    target_mask = np.concatenate((
-      np.ones((
-        target_mcp.shape[0],
-        1
-        )),
-      np.zeros((
-        self.max_seq_length - target_mcp.shape[0],
-        1
+      # Target mask
+      target_mask = np.concatenate((
+        np.ones((
+          params_dict['target']['mcp'].shape[0],
+          1
+          )),
+        np.zeros((
+          self.max_seq_length - params_dict['target']['mcp'].shape[0],
+          1
+          ))
         ))
-      ))
 
-    assert source_mask.shape == target_mask.shape
+      assert source_mask.shape == target_mask.shape
 
-    # Concatenate zero-padded source and target params
-    source_params = np.concatenate((
-      zero_pad_params(self.max_seq_length, 'src', source_mcp),
-      zero_pad_params(self.max_seq_length, 'src', source_f0_i),
-      zero_pad_params(self.max_seq_length, 'src', source_vf_i),
-      zero_pad_params(self.max_seq_length, 'src', source_voiced),
-      zero_pad_params(self.max_seq_length, 'src', src_eos_flag),
-      zero_pad_params(self.max_seq_length, 'src', src_spk_index),
-      zero_pad_params(self.max_seq_length, 'src', trg_spk_index)
-      ), axis=1)
+      # Concatenate zero-padded source and target params
+      source_params = np.concatenate((
+        zero_pad_params(self.max_seq_length, 'src',
+                        params_dict['source']['mcp']),
+        zero_pad_params(self.max_seq_length, 'src',
+                        params_dict['source']['lf0.i']),
+        zero_pad_params(self.max_seq_length, 'src',
+                        params_dict['source']['vf.i']),
+        zero_pad_params(self.max_seq_length, 'src',
+                        params_dict['source']['uv']),
+        zero_pad_params(self.max_seq_length, 'src', src_eos_flag),
+        zero_pad_params(self.max_seq_length, 'src', src_spk_index),
+        zero_pad_params(self.max_seq_length, 'src', trg_spk_index)
+        ), axis=1)
 
-    target_params = np.concatenate((
-      zero_pad_params(self.max_seq_length, 'trg', target_mcp),
-      zero_pad_params(self.max_seq_length, 'trg', target_f0_i),
-      zero_pad_params(self.max_seq_length, 'trg', target_vf_i),
-      zero_pad_params(self.max_seq_length, 'trg', target_voiced),
-      zero_pad_params(self.max_seq_length, 'trg', trg_eos_flag)
-      ), axis=1)
+      target_params = np.concatenate((
+        zero_pad_params(self.max_seq_length, 'trg',
+                        params_dict['target']['mcp']),
+        zero_pad_params(self.max_seq_length, 'trg',
+                        params_dict['target']['lf0.i']),
+        zero_pad_params(self.max_seq_length, 'trg',
+                        params_dict['target']['vf.i']),
+        zero_pad_params(self.max_seq_length, 'trg',
+                        params_dict['target']['uv']),
+        zero_pad_params(self.max_seq_length, 'trg', trg_eos_flag)
+        ), axis=1)
 
     return source_params, source_mask, target_params, target_mask
 

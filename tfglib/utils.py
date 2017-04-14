@@ -373,3 +373,41 @@ class Progbar(object):
 
   def add(self, n, values=None):
     self.update(self.seen_so_far + n, values)
+
+
+def sliding_window(sequence, win_size, step=1):
+  """Returns a generator that will iterate through
+  the defined chunks of input sequence.  Input sequence
+  must be iterable.
+
+  Original code by Augustine 'Gus' Dunn (xguse)
+  github.com/xguse/scipherPyProj/blob/master/scipherSrc/defs/basicDefs.py"""
+
+  # Verify the inputs
+  try:
+    type(sequence) == np.ndarray
+  except TypeError:
+    raise Exception("**ERROR** sequence must be iterable.")
+  if not ((type(win_size) == int) and (type(step) == int)):
+    raise Exception("**ERROR** type(winSize) and type(step) must be int.")
+  if step > win_size:
+    raise Exception("**ERROR** step must not be larger than winSize.")
+  if win_size > len(sequence):
+    raise Exception(
+        "**ERROR** winSize must not be larger than sequence length.")
+
+  # Pad sequence with zeros
+  padding = np.zeros((sequence.ndim, 2), dtype=np.int)
+  padding[0][1] = win_size - (sequence.shape[0] % win_size)
+
+  padded_sequence = np.pad(
+      sequence,
+      padding,
+      mode='constant', constant_values=0)
+
+  # Pre-compute number of chunks to emit
+  num_of_chunks = int(((len(padded_sequence) - win_size) / step) + 1)
+
+  # Do the work
+  for i in range(0, num_of_chunks * step, step):
+    yield padded_sequence[i:i + win_size]
