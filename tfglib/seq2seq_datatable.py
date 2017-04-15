@@ -19,7 +19,7 @@ from tfglib.zero_pad import zero_pad_params
 class Seq2SeqDatatable(object):
   def __init__(self, data_dir, datatable_file, speakers_file='speakers.list',
                basenames_file='seq2seq_basenames.list', shortseq=False,
-               max_seq_length=None):
+               max_seq_length=None, dev=False):
     """Make sure that if we are going to split sequences into short parts, there
     is an int max_seq_length.
   
@@ -51,6 +51,11 @@ class Seq2SeqDatatable(object):
     basenames = open(path_join(data_dir, basenames_file), 'r').readlines()
     # Strip '\n' characters
     self.basenames = [line.split('\n')[0] for line in basenames]
+
+    # Development option
+    if dev:
+      self.speakers = self.speakers[:2]
+      self.basenames = self.basenames[:10]
 
     self.shortseq = shortseq
     if shortseq:
@@ -139,6 +144,8 @@ class Seq2SeqDatatable(object):
     params_dict = {}
 
     for src_trg_key, src_trg_dict in settings_dict.items():
+      params_dict[src_trg_key] = {}
+
       for extension, param_len in src_trg_dict['params'].items():
         params_dict[src_trg_key][extension] = parse_file(
             param_len,
@@ -151,41 +158,77 @@ class Seq2SeqDatatable(object):
     #   0 -> unvoiced
     assert params_dict['source']['vf'].shape == params_dict['source'][
       'lf0'].shape
-    params_dict['source']['uv'] = np.empty(params_dict['source']['vf'].shape)
+    params_dict['source']['uv'] = np.empty(params_dict['source']['vf'].shape,
+                                           dtype=np.uint8)
 
     for index, vf in enumerate(params_dict['source']['vf']):
-      params_dict['source']['uv'][index] = 1 - kronecker_delta(
-          params_dict['source']['vf'][index])
+      params_dict['source']['uv'][index] = int(1 - kronecker_delta(
+          params_dict['source']['vf'][index]))
 
     assert params_dict['target']['vf'].shape == params_dict['target'][
       'lf0'].shape
-    params_dict['target']['uv'] = np.empty(params_dict['target']['vf'].shape)
+    params_dict['target']['uv'] = np.empty(params_dict['target']['vf'].shape,
+                                           dtype=np.uint8)
 
     for index, vf in enumerate(params_dict['target']['vf']):
-      params_dict['target']['uv'][index] = 1 - kronecker_delta(
-          params_dict['target']['vf'][index])
+      params_dict['target']['uv'][index] = int(1 - kronecker_delta(
+          params_dict['target']['vf'][index]))
 
     if self.shortseq:
 
       split_params = {}
-      # Split parameter vectors into chunks of size self.max_seq_length, with a
-      # superposition of self.max_seq_length/2
+      # - Split parameter vectors into chunks of size self.max_seq_length,
+      # with a
+      #   superposition of self.max_seq_length/2
+      # - The last sub-sequence is padded with zeros
+      # - Masks contain True for valid values, and False for padded values
       for origin, param_types in params_dict.items():
+        split_params[origin] = {}
+
         for param_type, parameters in param_types.items():
-          split_params[origin][param_type] = np.array(list(
-              sliding_window(
-                  parameters, self.max_seq_length, int(self.max_seq_length / 2)
-                  )))
+          split_params[origin][param_type] = {}
 
-      # TODO Initialize an EOS flag vector for each sub-sequence
+          (split_params[origin][param_type]['params'],
+           split_params[origin][param_type]['mask']
+           ) = sliding_window(
+              parameters, self.max_seq_length, int(self.max_seq_length / 2))
 
-      # TODO Assign a speaker index vector to each sub-sequence
+      # Initialize an EOS flag vector for each sub-sequence
+      split_params['source']['eos'] = np.zeros(
+          split_params['source']['vf']['params'].shape, dtype=np.uint8)
+      split_params['source']['eos'][:, -1] = 1
 
-      # TODO Initialize masks for each sequence
+      split_params['target']['eos'] = np.zeros(
+          split_params['target']['vf']['params'].shape, dtype=np.uint8)
+      split_params['target']['eos'][:, -1] = 1
 
-      # TODO Pad the sub-sequences (only the last sub-sequence will be padded)
+      # Assign a speaker index to each sub-sequence
+      split_params['source']['src_spk'] = src_index * np.ones(
+          split_params['source']['eos'].shape, dtype=np.int)
+      split_params['source']['trg_spk'] = trg_index * np.ones(
+          split_params['source']['eos'].shape, dtype=np.int)
 
-      pass
+      source_params = np.concatenate((
+        split_params['source']['mcp']['params'],
+        split_params['source']['lf0.i']['params'],
+        split_params['source']['vf.i']['params'],
+        split_params['source']['uv']['params'],
+        split_params['source']['eos'],
+        split_params['source']['src_spk'],
+        split_params['source']['trg_spk'],
+        ), axis=2)
+
+      source_mask = split_params['source']['vf.i']['mask']
+
+      target_params = np.concatenate((
+        split_params['target']['mcp']['params'],
+        split_params['target']['lf0.i']['params'],
+        split_params['target']['vf.i']['params'],
+        split_params['target']['uv']['params'],
+        split_params['target']['eos']
+        ), axis=2)
+
+      target_mask = split_params['target']['vf.i']['mask']
 
     else:
 
@@ -304,28 +347,32 @@ class Seq2SeqDatatable(object):
 
           # Obtain maximum and minimum values of each speaker's parameter
           # Mask parameters to avoid the zero-padded values
-          masked_params = mask_data(aux_src_params[:, 0:42], aux_src_mask)
+          for src_params, src_mask, trg_params, trg_mask in zip(aux_src_params,
+                                                                aux_src_mask,
+                                                                aux_trg_params,
+                                                                aux_trg_mask):
+            masked_params = mask_data(src_params[:, 0:42], src_mask)
 
-          # Compute maximum and minimum values
-          spk_max[src_index, :] = np.maximum(
-              spk_max[src_index, :], np.ma.max(masked_params, axis=0)
-              )
-          spk_min[src_index, :] = np.minimum(
-              spk_min[src_index, :], np.ma.min(masked_params, axis=0)
-              )
+            # Compute maximum and minimum values
+            spk_max[src_index, :] = np.maximum(
+                spk_max[src_index, :], np.ma.max(masked_params, axis=0)
+                )
+            spk_min[src_index, :] = np.minimum(
+                spk_min[src_index, :], np.ma.min(masked_params, axis=0)
+                )
 
-          # Append sequence params and masks to main datatables and masks
-          src_datatable.append(aux_src_params)
-          trg_datatable.append(aux_trg_params)
-          src_masks.append(aux_src_mask)
-          trg_masks.append(aux_trg_mask)
+            # Append sequence params and masks to main datatables and masks
+            src_datatable.append(src_params)
+            trg_datatable.append(trg_params)
+            src_masks.append(src_mask)
+            trg_masks.append(trg_mask)
 
     return (np.array(src_datatable),
-            np.array(src_masks).reshape(-1, self.max_seq_length),
             # Reshape to 2D mask
+            np.array(src_masks).reshape(-1, self.max_seq_length),
             np.array(trg_datatable),
-            np.array(trg_masks).reshape(-1, self.max_seq_length),
             # Reshape 2D mask
+            np.array(trg_masks).reshape(-1, self.max_seq_length),
             # max_seq_length,
             spk_max,
             spk_min)

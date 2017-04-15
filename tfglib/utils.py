@@ -392,11 +392,14 @@ def sliding_window(sequence, win_size, step=1):
     raise Exception("**ERROR** type(winSize) and type(step) must be int.")
   if step > win_size:
     raise Exception("**ERROR** step must not be larger than winSize.")
-  if win_size > len(sequence):
-    raise Exception(
-        "**ERROR** winSize must not be larger than sequence length.")
+  # if win_size > len(sequence):
+  #   raise Exception(
+  #       "**ERROR** winSize must not be larger than sequence length.")
 
-  # Pad sequence with zeros
+  # Initialize mask matrix
+  mask = np.ones((sequence.shape[0],1), dtype=np.bool)
+
+  # Pad sequence with zeros and mask with 'False'
   padding = np.zeros((sequence.ndim, 2), dtype=np.int)
   padding[0][1] = win_size - (sequence.shape[0] % win_size)
 
@@ -404,10 +407,20 @@ def sliding_window(sequence, win_size, step=1):
       sequence,
       padding,
       mode='constant', constant_values=0)
+  padded_mask = np.pad(
+      mask,
+      padding,
+      mode='constant', constant_values=False)
 
   # Pre-compute number of chunks to emit
   num_of_chunks = int(((len(padded_sequence) - win_size) / step) + 1)
 
   # Do the work
+  chunks = []
+  masks = []
   for i in range(0, num_of_chunks * step, step):
-    yield padded_sequence[i:i + win_size]
+    # yield (padded_sequence[i:i + win_size], padded_mask[i:i + win_size])
+    chunks.append(padded_sequence[i:i + win_size])
+    masks.append(padded_mask[i:i + win_size])
+
+  return np.array(chunks), np.array(masks)
