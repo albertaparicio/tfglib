@@ -9,7 +9,6 @@ from os.path import join as path_join
 import h5py
 import numpy as np
 from keras.utils.np_utils import to_categorical
-
 from tfglib.construct_table import parse_file
 from tfglib.seq2seq_normalize import mask_data
 from tfglib.utils import kronecker_delta, sliding_window
@@ -447,7 +446,7 @@ class Seq2SeqDatatable(object):
           are padded (0) and which of them are original from the data (1)"""
 
     # Load data from .h5 file
-    with h5py.File(self.datatable_file, 'r') as file:
+    with h5py.File(self.datatable_file + '.h5', 'r') as file:
       # Load datasets
       source_datatable = file['src_datatable'][:, :]
       target_datatable = file['trg_datatable'][:, :]
