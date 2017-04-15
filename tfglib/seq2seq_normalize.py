@@ -25,20 +25,12 @@ def maxmin_scaling(
   src_masked = mask_data(src_matrix, src_mask)
   trg_masked = mask_data(trg_matrix, trg_mask)
 
-  # Compute speaker indexes
-  src_spk_index = np.argmax(np.ma.argmax(
-      src_masked[:, 44:54], axis=0, fill_value=0)
-      )
-  trg_spk_index = np.argmax(np.ma.argmax(
-      src_masked[:, 54:64], axis=0, fill_value=0)
-      )
-
   # Obtain maximum and minimum values matrices
-  src_spk_max = max_mat[src_spk_index, :]
-  src_spk_min = min_mat[src_spk_index, :]
+  src_spk_max = max_mat[int(src_matrix[0,44]), :]
+  src_spk_min = min_mat[int(src_matrix[0,44]), :]
 
-  trg_spk_max = max_mat[trg_spk_index, :]
-  trg_spk_min = min_mat[trg_spk_index, :]
+  trg_spk_max = max_mat[int(src_matrix[0,45]), :]
+  trg_spk_min = min_mat[int(src_matrix[0,45]), :]
 
   # Compute minmax scaling
   src_norm = (src_masked[:, 0:42] - src_spk_min) / (src_spk_max - src_spk_min)
