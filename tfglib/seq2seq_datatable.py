@@ -9,6 +9,7 @@ from os.path import join as path_join
 import h5py
 import numpy as np
 from keras.utils.np_utils import to_categorical
+
 from tfglib.construct_table import parse_file
 from tfglib.seq2seq_normalize import mask_data
 from tfglib.utils import kronecker_delta, sliding_window
@@ -300,6 +301,7 @@ class Seq2SeqDatatable(object):
         zero_pad_params(self.max_seq_length, 'trg', trg_eos_flag)
         ), axis=1)
 
+    # TODO Return basename with sequence(s)
     return source_params, source_mask, target_params, target_mask
 
   def seq2seq_construct_datatable(self):

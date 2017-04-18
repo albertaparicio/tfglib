@@ -42,9 +42,7 @@ def maxmin_scaling(
 def unscale_prediction(src_matrix, src_mask, scaled_pred, max_mat, min_mat):
   src_masked_data = mask_data(src_matrix, src_mask)
 
-  src_spk_index = np.argmax(np.ma.argmax(
-      src_masked_data[:, 44:54], axis=0, fill_value=0
-      ))
+  src_spk_index = int(src_masked_data[0, 44])
 
   src_spk_max = max_mat[src_spk_index, :]
   src_spk_min = min_mat[src_spk_index, :]
