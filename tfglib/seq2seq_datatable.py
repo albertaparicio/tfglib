@@ -191,7 +191,8 @@ class Seq2SeqDatatable(object):
           (split_params[origin][param_type]['params'],
            split_params[origin][param_type]['mask']
            ) = sliding_window(
-              parameters, self.max_seq_length, int(self.max_seq_length / 2))
+              parameters, self.max_seq_length, mode=origin,
+              step=int(self.max_seq_length / 2))
 
       # Initialize an EOS flag vector for each sub-sequence
       split_params['source']['eos'] = np.zeros(

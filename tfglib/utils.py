@@ -375,13 +375,15 @@ class Progbar(object):
     self.update(self.seen_so_far + n, values)
 
 
-def sliding_window(sequence, win_size, step=1):
+def sliding_window(sequence, win_size, mode, step=1):
   """Returns a generator that will iterate through
   the defined chunks of input sequence.  Input sequence
   must be iterable.
 
   Original code by Augustine 'Gus' Dunn (xguse)
   github.com/xguse/scipherPyProj/blob/master/scipherSrc/defs/basicDefs.py"""
+
+  pad_dict = {'source': 0, 'target': 1}
 
   # Verify the inputs
   try:
@@ -395,13 +397,19 @@ def sliding_window(sequence, win_size, step=1):
   # if win_size > len(sequence):
   #   raise Exception(
   #       "**ERROR** winSize must not be larger than sequence length.")
+  try:
+    assert mode in pad_dict.keys()
+  except AssertionError:
+    raise Exception(
+        "Unsupported mode '{}'. Please select one of these modes: {}".format(
+            mode, list(pad_dict.keys())))
 
   # Initialize mask matrix
-  mask = np.ones((sequence.shape[0],1), dtype=np.bool)
+  mask = np.ones((sequence.shape[0], 1), dtype=np.bool)
 
-  # Pad sequence with zeros and mask with 'False'
+  # Pad sequence with zeros and mask with 'False' according to the selected mode
   padding = np.zeros((sequence.ndim, 2), dtype=np.int)
-  padding[0][1] = win_size - (sequence.shape[0] % win_size)
+  padding[0][pad_dict[mode]] = win_size - (sequence.shape[0] % win_size)
 
   padded_sequence = np.pad(
       sequence,
