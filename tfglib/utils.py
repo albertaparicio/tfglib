@@ -426,9 +426,11 @@ def sliding_window(sequence, win_size, mode, step=1):
   # Do the work
   chunks = []
   masks = []
+  seq_lengths = []
   for i in range(0, num_of_chunks * step, step):
     # yield (padded_sequence[i:i + win_size], padded_mask[i:i + win_size])
     chunks.append(padded_sequence[i:i + win_size])
     masks.append(padded_mask[i:i + win_size])
+    seq_lengths.append(np.count_nonzero(masks[-1]))
 
-  return np.array(chunks), np.array(masks)
+  return np.array(chunks), np.array(masks), np.array(seq_lengths)

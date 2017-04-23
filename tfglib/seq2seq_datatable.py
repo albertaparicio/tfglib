@@ -189,7 +189,8 @@ class Seq2SeqDatatable(object):
           split_params[origin][param_type] = {}
 
           (split_params[origin][param_type]['params'],
-           split_params[origin][param_type]['mask']
+           split_params[origin][param_type]['mask'],
+           split_params[origin][param_type]['seq_len']
            ) = sliding_window(
               parameters, self.max_seq_length, mode=origin,
               step=int(self.max_seq_length / 2))
@@ -221,6 +222,8 @@ class Seq2SeqDatatable(object):
 
       source_mask = split_params['source']['vf.i']['mask']
 
+      source_seq_len = split_params['source']['vf.i']['seq_len']
+
       target_params = np.concatenate((
         split_params['target']['mcp']['params'],
         split_params['target']['lf0.i']['params'],
@@ -230,6 +233,8 @@ class Seq2SeqDatatable(object):
         ), axis=2)
 
       target_mask = split_params['target']['vf.i']['mask']
+
+      target_seq_len = split_params['target']['vf.i']['seq_len']
 
     else:
 
@@ -302,8 +307,12 @@ class Seq2SeqDatatable(object):
         zero_pad_params(self.max_seq_length, 'trg', trg_eos_flag)
         ), axis=1)
 
+      source_seq_len = target_seq_len = None
+
     # TODO Return basename with sequence(s)
-    return source_params, source_mask, target_params, target_mask
+    return (
+      source_params, source_mask, source_seq_len, target_params, target_mask,
+      target_seq_len)
 
   def seq2seq_construct_datatable(self):
     """Concatenate and zero-pad all vocoder parameters
@@ -324,6 +333,8 @@ class Seq2SeqDatatable(object):
     trg_datatable = []
     src_masks = []
     trg_masks = []
+    src_seq_len = []
+    trg_seq_len = []
 
     # Initialize maximum and minimum values matrices
     spk_max = np.zeros((10, 42))
@@ -337,8 +348,10 @@ class Seq2SeqDatatable(object):
 
           (aux_src_params,
            aux_src_mask,
+           aux_src_seq,
            aux_trg_params,
-           aux_trg_mask
+           aux_trg_mask,
+           aux_trg_seq
            ) = self.seq2seq_build_file_table(
               path_join(self.data_dir, 'vocoded_s2s', src_spk),
               src_index,
@@ -349,10 +362,12 @@ class Seq2SeqDatatable(object):
 
           # Obtain maximum and minimum values of each speaker's parameter
           # Mask parameters to avoid the zero-padded values
-          for src_params, src_mask, trg_params, trg_mask in zip(aux_src_params,
-                                                                aux_src_mask,
-                                                                aux_trg_params,
-                                                                aux_trg_mask):
+          for (
+              src_params, src_mask, src_seq, trg_params, trg_mask, trg_seq
+              ) in zip(
+              aux_src_params, aux_src_mask, aux_src_seq, aux_trg_params,
+              aux_trg_mask, aux_trg_seq
+              ):
             masked_params = mask_data(src_params[:, 0:42], src_mask)
 
             # Compute maximum and minimum values
@@ -368,16 +383,25 @@ class Seq2SeqDatatable(object):
             trg_datatable.append(trg_params)
             src_masks.append(src_mask)
             trg_masks.append(trg_mask)
+            src_seq_len.append(src_seq)
+            trg_seq_len.append(trg_seq)
 
-    return (np.array(src_datatable),
-            # Reshape to 2D mask
-            np.array(src_masks).reshape(-1, self.max_seq_length),
-            np.array(trg_datatable),
-            # Reshape 2D mask
-            np.array(trg_masks).reshape(-1, self.max_seq_length),
-            # max_seq_length,
-            spk_max,
-            spk_min)
+    return (
+      # Source parameters
+      np.array(src_datatable),
+      # Reshape to 2D mask
+      np.array(src_masks).reshape(-1, self.max_seq_length),
+      np.array(src_seq_len),
+
+      # Target parameters
+      np.array(trg_datatable),
+      # Reshape 2D mask
+      np.array(trg_masks).reshape(-1, self.max_seq_length),
+      np.array(trg_seq_len),
+
+      # Speaker statistics
+      spk_max,
+      spk_min)
 
   def seq2seq_save_datatable(self):
     """Generate datatables and masks and save them to .h5 file
@@ -397,17 +421,21 @@ class Seq2SeqDatatable(object):
     # Construct datatables and masks
     (source_datatable,
      source_masks,
+     source_seq_len,
      target_datatable,
      target_masks,
+     target_seq_len,
      speakers_max,
      speakers_min) = self.seq2seq_construct_datatable()
 
     # Save dataset names and dataset arrays for elegant iteration when saving
     data_dict = {
       'src_datatable': source_datatable,
-      'trg_datatable': target_datatable,
       'src_mask'     : source_masks,
-      'trg_mask'     : target_masks
+      'src_seq_len'  : source_seq_len,
+      'trg_datatable': target_datatable,
+      'trg_mask'     : target_masks,
+      'trg_seq_len'  : target_seq_len
       }
 
     # Save data to .h5 file
@@ -430,8 +458,10 @@ class Seq2SeqDatatable(object):
 
     return (source_datatable,
             source_masks,
+            source_seq_len,
             target_datatable,
             target_masks,
+            target_seq_len,
             speakers_max,
             speakers_min)
 
@@ -457,6 +487,9 @@ class Seq2SeqDatatable(object):
       source_masks = file['src_mask'][:, :]
       target_masks = file['trg_mask'][:, :]
 
+      source_seq_len = file['src_seq_len'][:, :]
+      target_seq_len = file['trg_seq_len'][:, :]
+
       # Load max_seq_length attribute
       self.max_seq_length = file.attrs.get('max_seq_length')
       speakers_max = file.attrs.get('speakers_max')
@@ -466,7 +499,9 @@ class Seq2SeqDatatable(object):
 
     return (source_datatable,
             source_masks,
+            source_seq_len,
             target_datatable,
             target_masks,
+            target_seq_len,
             speakers_max,
             speakers_min)
