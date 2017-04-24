@@ -17,9 +17,10 @@ from tfglib.zero_pad import zero_pad_params
 
 
 class Seq2SeqDatatable(object):
-  def __init__(self, data_dir, datatable_file, speakers_file='speakers.list',
-               basenames_file='seq2seq_basenames.list', shortseq=False,
-               max_seq_length=None, dev=False):
+  def __init__(self, data_dir, datatable_file, shortseq=False,
+               src_speakers_file='src_speakers.list', max_seq_length=None,
+               trg_speakers_file='trg_speakers.list',
+               basenames_file='seq2seq_basenames.list', dev=False):
     """Make sure that if we are going to split sequences into short parts, there
     is an int max_seq_length.
   
@@ -42,9 +43,12 @@ class Seq2SeqDatatable(object):
     self.datatable_file = datatable_file
 
     # Parse speakers file
-    speakers = open(path_join(data_dir, speakers_file), 'r').readlines()
+    src_speakers = open(path_join(data_dir, src_speakers_file), 'r').readlines()
     # Strip '\n' characters
-    self.speakers = [line.split('\n')[0] for line in speakers]
+    self.src_speakers = [line.split('\n')[0] for line in src_speakers]
+    trg_speakers = open(path_join(data_dir, trg_speakers_file), 'r').readlines()
+    # Strip '\n' characters
+    self.trg_speakers = [line.split('\n')[0] for line in trg_speakers]
 
     # Parse basenames file
     # This file should be equal for all speakers
@@ -341,8 +345,10 @@ class Seq2SeqDatatable(object):
     spk_min = 1e+50 * np.ones((10, 42))
 
     # Nest iterate over speakers
-    for src_index, src_spk in enumerate(self.speakers):
-      for trg_index, trg_spk in enumerate(self.speakers):
+    # for ((src_index, src_spk), (trg_index, trg_spk)) in zip(
+    #     enumerate(self.src_peakers), enumerate(self.trg_speakers)):
+    for src_index, src_spk in enumerate(self.src_peakers):
+      for trg_index, trg_spk in enumerate(self.trg_speakers):
         for basename in self.basenames:
           print(src_spk + '->' + trg_spk + ' ' + basename)
 
