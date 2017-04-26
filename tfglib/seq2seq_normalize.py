@@ -8,6 +8,7 @@ import numpy as np
 
 
 def mask_data(data_matrix, data_mask):
+  """Assumes it is input one sequence only"""
   return np.ma.array(
       data_matrix,
       mask=np.logical_not(np.repeat(

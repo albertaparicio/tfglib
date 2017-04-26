@@ -347,7 +347,7 @@ class Seq2SeqDatatable(object):
     # Nest iterate over speakers
     # for ((src_index, src_spk), (trg_index, trg_spk)) in zip(
     #     enumerate(self.src_peakers), enumerate(self.trg_speakers)):
-    for src_index, src_spk in enumerate(self.src_peakers):
+    for src_index, src_spk in enumerate(self.src_speakers):
       for trg_index, trg_spk in enumerate(self.trg_speakers):
         for basename in self.basenames:
           print(src_spk + '->' + trg_spk + ' ' + basename)
@@ -471,7 +471,7 @@ class Seq2SeqDatatable(object):
             speakers_max,
             speakers_min)
 
-  def seq2seq2_load_datatable(self):
+  def seq2seq_load_datatable(self):
     """Load datasets and masks from an h5py file
   
     # Arguments
@@ -493,8 +493,8 @@ class Seq2SeqDatatable(object):
       source_masks = file['src_mask'][:, :]
       target_masks = file['trg_mask'][:, :]
 
-      source_seq_len = file['src_seq_len'][:, :]
-      target_seq_len = file['trg_seq_len'][:, :]
+      source_seq_len = file['src_seq_len'][:]
+      target_seq_len = file['trg_seq_len'][:]
 
       # Load max_seq_length attribute
       self.max_seq_length = file.attrs.get('max_seq_length')
