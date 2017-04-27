@@ -20,18 +20,18 @@ def mask_data(data_matrix, data_mask):
 
 
 def maxmin_scaling(
-    src_matrix, src_mask, trg_matrix, trg_mask, max_mat, min_mat
-    ):
+    src_matrix, src_mask, trg_matrix, trg_mask, src_max_mat, src_min_mat,
+    trg_max_mat, trg_min_mat):
   # Mask data
   src_masked = mask_data(src_matrix, src_mask)
   trg_masked = mask_data(trg_matrix, trg_mask)
 
   # Obtain maximum and minimum values matrices
-  src_spk_max = max_mat[int(src_matrix[0, 44]), :]
-  src_spk_min = min_mat[int(src_matrix[0, 44]), :]
+  src_spk_max = src_max_mat[int(src_matrix[0, 44]), :]
+  src_spk_min = src_min_mat[int(src_matrix[0, 44]), :]
 
-  trg_spk_max = max_mat[int(src_matrix[0, 45]), :]
-  trg_spk_min = min_mat[int(src_matrix[0, 45]), :]
+  trg_spk_max = trg_max_mat[int(trg_matrix[0, 45]), :]
+  trg_spk_min = trg_min_mat[int(trg_matrix[0, 45]), :]
 
   # Compute minmax scaling
   src_norm = (src_masked[:, 0:42] - src_spk_min) / (src_spk_max - src_spk_min)

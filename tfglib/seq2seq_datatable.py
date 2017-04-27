@@ -341,8 +341,10 @@ class Seq2SeqDatatable(object):
     trg_seq_len = []
 
     # Initialize maximum and minimum values matrices
-    spk_max = np.zeros((10, 42))
-    spk_min = 1e+50 * np.ones((10, 42))
+    src_spk_max = np.zeros((10, 42))
+    src_spk_min = 1e+50 * np.ones((10, 42))
+    trg_spk_max = np.zeros((10, 42))
+    trg_spk_min = 1e+50 * np.ones((10, 42))
 
     # Nest iterate over speakers
     # for ((src_index, src_spk), (trg_index, trg_spk)) in zip(
@@ -374,14 +376,22 @@ class Seq2SeqDatatable(object):
               aux_src_params, aux_src_mask, aux_src_seq, aux_trg_params,
               aux_trg_mask, aux_trg_seq
               ):
-            masked_params = mask_data(src_params[:, 0:42], src_mask)
+            src_masked_params = mask_data(src_params[:, 0:42], src_mask)
+            trg_masked_params = mask_data(trg_params[:, 0:42], trg_mask)
 
-            # Compute maximum and minimum values
-            spk_max[src_index, :] = np.maximum(
-                spk_max[src_index, :], np.ma.max(masked_params, axis=0)
+            # Compute maximum and minimum values from source and target speakers
+            src_spk_max[src_index, :] = np.maximum(
+                spk_max[src_index, :], np.ma.max(src_masked_params, axis=0)
                 )
-            spk_min[src_index, :] = np.minimum(
-                spk_min[src_index, :], np.ma.min(masked_params, axis=0)
+            src_spk_min[src_index, :] = np.minimum(
+                spk_min[src_index, :], np.ma.min(src_masked_params, axis=0)
+                )
+
+            trg_spk_max[trg_index, :] = np.maximum(
+                spk_max[trg_index, :], np.ma.max(trg_masked_params, axis=0)
+                )
+            trg_spk_min[trg_index, :] = np.minimum(
+                spk_min[trg_index, :], np.ma.min(trg_masked_params, axis=0)
                 )
 
             # Append sequence params and masks to main datatables and masks
@@ -406,8 +416,10 @@ class Seq2SeqDatatable(object):
       np.array(trg_seq_len),
 
       # Speaker statistics
-      spk_max,
-      spk_min)
+      src_spk_max,
+      src_spk_min,
+      trg_spk_max,
+      trg_spk_min)
 
   def seq2seq_save_datatable(self):
     """Generate datatables and masks and save them to .h5 file
@@ -431,8 +443,10 @@ class Seq2SeqDatatable(object):
      target_datatable,
      target_masks,
      target_seq_len,
-     speakers_max,
-     speakers_min) = self.seq2seq_construct_datatable()
+     src_speakers_max,
+     src_speakers_min,
+     trg_speakers_max,
+     trg_speakers_min) = self.seq2seq_construct_datatable()
 
     # Save dataset names and dataset arrays for elegant iteration when saving
     data_dict = {
@@ -448,8 +462,10 @@ class Seq2SeqDatatable(object):
     with h5py.File(self.datatable_file + '.h5', 'w') as f:
       # Save max_seq_length as an attribute
       f.attrs.create('max_seq_length', self.max_seq_length, dtype=int)
-      f.attrs.create('speakers_max', speakers_max)
-      f.attrs.create('speakers_min', speakers_min)
+      f.attrs.create('src_speakers_max', src_speakers_max)
+      f.attrs.create('src_speakers_min', src_speakers_min)
+      f.attrs.create('trg_speakers_max', trg_speakers_max)
+      f.attrs.create('trg_speakers_min', trg_speakers_min)
 
       # Save the rest of datasets
       for dataset_name, dataset in data_dict.items():
@@ -468,8 +484,10 @@ class Seq2SeqDatatable(object):
             target_datatable,
             target_masks,
             target_seq_len,
-            speakers_max,
-            speakers_min)
+            src_speakers_max,
+            src_speakers_min,
+            trg_speakers_max,
+            trg_speakers_min)
 
   def seq2seq_load_datatable(self):
     """Load datasets and masks from an h5py file
@@ -498,8 +516,10 @@ class Seq2SeqDatatable(object):
 
       # Load max_seq_length attribute
       self.max_seq_length = file.attrs.get('max_seq_length')
-      speakers_max = file.attrs.get('speakers_max')
-      speakers_min = file.attrs.get('speakers_min')
+      speakers_max = file.attrs.get('src_speakers_max')
+      speakers_min = file.attrs.get('src_speakers_min')
+      speakers_max = file.attrs.get('trg_speakers_max')
+      speakers_min = file.attrs.get('trg_speakers_min')
 
       file.close()
 
@@ -509,5 +529,7 @@ class Seq2SeqDatatable(object):
             target_datatable,
             target_masks,
             target_seq_len,
-            speakers_max,
-            speakers_min)
+            src_speakers_max,
+            src_speakers_min,
+            trg_speakers_max,
+            trg_speakers_min)
