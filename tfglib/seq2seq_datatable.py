@@ -59,8 +59,8 @@ class Seq2SeqDatatable(object):
 
     # Development option
     if dev:
-      self.speakers = self.speakers[:2]
-      self.basenames = self.basenames[:10]
+      # self.speakers = self.speakers[:2]
+      self.basenames = self.basenames[:1]
 
     self.shortseq = shortseq
     if shortseq:
@@ -342,9 +342,9 @@ class Seq2SeqDatatable(object):
     trg_seq_len = []
 
     # Initialize maximum and minimum values matrices
-    src_spk_max = np.zeros((10, 42))
+    src_spk_max = -1e+50 * np.ones((10, 42))
     src_spk_min = 1e+50 * np.ones((10, 42))
-    trg_spk_max = np.zeros((10, 42))
+    trg_spk_max = -1e+50 * np.ones((10, 42))
     trg_spk_min = 1e+50 * np.ones((10, 42))
 
     # Nest iterate over speakers
@@ -381,19 +381,23 @@ class Seq2SeqDatatable(object):
             trg_masked_params = mask_data(trg_params[:, 0:42], trg_mask)
 
             # Compute maximum and minimum values from source and target speakers
-            src_spk_max[src_index, :] = np.maximum(
-                src_spk_max[src_index, :], np.ma.max(src_masked_params, axis=0)
-                )
-            src_spk_min[src_index, :] = np.minimum(
-                src_spk_max[src_index, :], np.ma.min(src_masked_params, axis=0)
-                )
+            src_spk_max[src_index, :] = np.maximum(src_spk_max[src_index, :],
+                                                   np.max(np.ma.filled(
+                                                     src_masked_params,
+                                                     fill_value=-1e50), axis=0))
+            src_spk_min[src_index, :] = np.minimum(src_spk_min[src_index, :],
+                                                   np.min(np.ma.filled(
+                                                     src_masked_params,
+                                                     fill_value=+1e50), axis=0))
 
-            trg_spk_max[trg_index, :] = np.maximum(
-                trg_spk_max[trg_index, :], np.ma.max(trg_masked_params, axis=0)
-                )
-            trg_spk_min[trg_index, :] = np.minimum(
-                trg_spk_max[trg_index, :], np.ma.min(trg_masked_params, axis=0)
-                )
+            trg_spk_max[trg_index, :] = np.maximum(trg_spk_max[trg_index, :],
+                                                   np.max(np.ma.filled(
+                                                     trg_masked_params,
+                                                     fill_value=-1e50), axis=0))
+            trg_spk_min[trg_index, :] = np.minimum(trg_spk_min[trg_index, :],
+                                                   np.min(np.ma.filled(
+                                                     trg_masked_params,
+                                                     fill_value=+1e50), axis=0))
 
             # Append sequence params and masks to main datatables and masks
             src_datatable.append(src_params)

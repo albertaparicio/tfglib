@@ -30,8 +30,8 @@ def maxmin_scaling(
   src_spk_max = src_max_mat[int(src_matrix[0, 44]), :]
   src_spk_min = src_min_mat[int(src_matrix[0, 44]), :]
 
-  trg_spk_max = trg_max_mat[int(trg_matrix[0, 45]), :]
-  trg_spk_min = trg_min_mat[int(trg_matrix[0, 45]), :]
+  trg_spk_max = trg_max_mat[int(src_matrix[0, 45]), :]
+  trg_spk_min = trg_min_mat[int(src_matrix[0, 45]), :]
 
   # Compute minmax scaling
   src_norm = (src_masked[:, 0:42] - src_spk_min) / (src_spk_max - src_spk_min)
