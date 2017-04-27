@@ -19,7 +19,7 @@ from tfglib.zero_pad import zero_pad_params
 class Seq2SeqDatatable(object):
   def __init__(self, data_dir, datatable_file, shortseq=False,
                src_speakers_file='src_speakers.list', max_seq_length=None,
-               trg_speakers_file='trg_speakers.list',
+               trg_speakers_file='trg_speakers.list', vocoded_dir='vocoded_s2s',
                basenames_file='seq2seq_basenames.list', dev=False):
     """Make sure that if we are going to split sequences into short parts, there
     is an int max_seq_length.
@@ -40,6 +40,7 @@ class Seq2SeqDatatable(object):
       print("Please, make sure the data output filename is a string")
 
     self.data_dir = data_dir
+    self.vocoded_dir = vocoded_dir
     self.datatable_file = datatable_file
 
     # Parse speakers file
@@ -89,7 +90,7 @@ class Seq2SeqDatatable(object):
             1,
             path_join(
                 self.data_dir,
-                'vocoded_s2s',
+                self.vocoded_dir,
                 speaker,
                 basename + '.' + 'lf0' + '.dat'
                 )
@@ -361,9 +362,9 @@ class Seq2SeqDatatable(object):
            aux_trg_mask,
            aux_trg_seq
            ) = self.seq2seq_build_file_table(
-              path_join(self.data_dir, 'vocoded_s2s', src_spk),
+              path_join(self.data_dir, self.vocoded_dir, src_spk),
               src_index,
-              path_join(self.data_dir, 'vocoded_s2s', trg_spk),
+              path_join(self.data_dir, self.vocoded_dir, trg_spk),
               trg_index,
               basename,
               )
