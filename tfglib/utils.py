@@ -21,7 +21,6 @@ import sys
 import time
 
 import numpy as np
-from keras.backend import reverse
 
 
 def kronecker_delta(x):
@@ -248,6 +247,8 @@ def s2s_load_weights(model, filepath, offset=0):
 
 
 def reverse_encoder_output(input_tensor):
+  from keras.backend import reverse
+
   return reverse(input_tensor, axes=1)
 
 

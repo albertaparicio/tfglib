@@ -197,9 +197,9 @@ class Seq2SeqDatatable(object):
            split_params[origin][param_type]['mask'],
            split_params[origin][param_type]['seq_len']
            ) = sliding_window(
-              # parameters, self.max_seq_length, mode=origin,
-              # Hardcode padding mode at the right of the chunk
-              parameters, self.max_seq_length, mode='target',
+              parameters, self.max_seq_length, mode=origin,
+              # Hardcode padding mode at the left of the chunk
+              # parameters, self.max_seq_length, mode='source',
               step=int(self.max_seq_length / 2))
 
       # Initialize an EOS flag vector for each sub-sequence
