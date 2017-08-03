@@ -21,7 +21,6 @@ import sys
 import time
 
 import numpy as np
-from keras.backend import reverse
 
 
 def kronecker_delta(x):
@@ -248,6 +247,8 @@ def s2s_load_weights(model, filepath, offset=0):
 
 
 def reverse_encoder_output(input_tensor):
+  from keras.backend import reverse
+
   return reverse(input_tensor, axes=1)
 
 
@@ -373,3 +374,64 @@ class Progbar(object):
 
   def add(self, n, values=None):
     self.update(self.seen_so_far + n, values)
+
+
+def sliding_window(sequence, win_size, mode, step=1):
+  """Returns a generator that will iterate through
+  the defined chunks of input sequence.  Input sequence
+  must be iterable.
+
+  Original code by Augustine 'Gus' Dunn (xguse)
+  github.com/xguse/scipherPyProj/blob/master/scipherSrc/defs/basicDefs.py"""
+
+  pad_dict = {'source': 0, 'target': 1}
+
+  # Verify the inputs
+  try:
+    type(sequence) == np.ndarray
+  except TypeError:
+    raise Exception("**ERROR** sequence must be iterable.")
+  if not ((type(win_size) == int) and (type(step) == int)):
+    raise Exception("**ERROR** type(winSize) and type(step) must be int.")
+  if step > win_size:
+    raise Exception("**ERROR** step must not be larger than winSize.")
+  # if win_size > len(sequence):
+  #   raise Exception(
+  #       "**ERROR** winSize must not be larger than sequence length.")
+  try:
+    assert mode in pad_dict.keys()
+  except AssertionError:
+    raise Exception(
+        "Unsupported mode '{}'. Please select one of these modes: {}".format(
+            mode, list(pad_dict.keys())))
+
+  # Initialize mask matrix
+  mask = np.ones((sequence.shape[0], 1), dtype=np.bool)
+
+  # Pad sequence with zeros and mask with 'False' according to the selected mode
+  padding = np.zeros((sequence.ndim, 2), dtype=np.int)
+  padding[0][pad_dict[mode]] = win_size - (sequence.shape[0] % win_size)
+
+  padded_sequence = np.pad(
+      sequence,
+      padding,
+      mode='constant', constant_values=0)
+  padded_mask = np.pad(
+      mask,
+      padding,
+      mode='constant', constant_values=False)
+
+  # Pre-compute number of chunks to emit
+  num_of_chunks = int(((len(padded_sequence) - win_size) / step) + 1)
+
+  # Do the work
+  chunks = []
+  masks = []
+  seq_lengths = []
+  for i in range(0, num_of_chunks * step, step):
+    # yield (padded_sequence[i:i + win_size], padded_mask[i:i + win_size])
+    chunks.append(padded_sequence[i:i + win_size])
+    masks.append(padded_mask[i:i + win_size])
+    seq_lengths.append(np.count_nonzero(masks[-1]))
+
+  return np.array(chunks), np.array(masks), np.array(seq_lengths)
